@@ -1,6 +1,6 @@
 # AutixAI
 
-Responsive marketing website for AutixAI, an AI automation and workflow integration business. Brand palette: St. Patrick’s blue `#23297A`, neon red `#FF334B`, black `#080A10`.
+Responsive marketing website for AutixAI, an AI automation and workflow integration business. Brand palette: olive green `#566132`, beige `#EDE6D6`, dark brown outlines `#3B2C21`.
 
 ## Local preview
 
