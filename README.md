@@ -18,4 +18,4 @@ The workflow portfolio contains examples, not claimed client projects. No custom
 
 ## Publishing
 
-Sites identity is stored in `.openai/hosting.json`. The site starts private. Source assets in `dist` are maintained directly; no build step or package installation is required. Google Fonts load externally with local sans-serif fallbacks.
+Sites identity is stored in `.openai/hosting.json`. The site starts private. Source assets in `dist` are maintained directly; no build step or package installation is required. Caviar Dreams (body and controls) and Cinzel (headings) are self-hosted in `dist/fonts`, with attribution and license records. Light brown `#C7A98A` warms the glass surfaces and section backgrounds.
