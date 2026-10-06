@@ -1,1 +1,3 @@
 .vercel/
+.render-runtime/
+.qa/

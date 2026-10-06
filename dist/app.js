@@ -26,15 +26,30 @@ const detail = document.getElementById('workflow-detail');
 const workflowButtons = document.querySelectorAll('[data-workflow-button]');
 const runButton = document.getElementById('run-demo');
 const status = document.getElementById('demo-status');
+const demoVisual = document.createElement('div');
+demoVisual.className = 'demo-visual';
+demoVisual.setAttribute('aria-hidden', 'true');
+demoVisual.innerHTML = `<svg viewBox="0 0 800 100" xmlns="http://www.w3.org/2000/svg"><path class="demo-route" d="M60 50H740"/><path class="demo-route-active" d="M60 50H740" pathLength="100"/>${[60,286.67,513.33,740].map((x,i)=>`<g class="demo-node"><circle class="node-halo" cx="${x}" cy="50" r="30"/><circle cx="${x}" cy="50" r="23"/><text x="${x}" y="51">0${i+1}</text></g>`).join('')}<circle class="demo-packet" cx="60" cy="50" r="5"/></svg><div class="demo-labels"><span></span><span></span><span></span><span></span></div>`;
+document.getElementById('detail-description').after(demoVisual);
+const demoNodes = [...demoVisual.querySelectorAll('.demo-node')];
+const demoRoute = demoVisual.querySelector('.demo-route-active');
+const demoPacket = demoVisual.querySelector('.demo-packet');
+const demoLabels = {leads:['Capture','Qualify','CRM sync','Follow-up'],support:['Question','Knowledge','Answer','Handover'],operations:['Document','Extract','Review','Update']};
 let activeWorkflow = null;
 let demoTimer = null;
-function resetDemo() { clearTimeout(demoTimer); runButton.disabled = false; runButton.textContent = 'Run workflow demo'; status.textContent = 'Run the demo to see how the steps connect.'; }
+function resetDemo() {
+  clearTimeout(demoTimer); runButton.disabled = false; runButton.textContent = 'Run workflow demo'; status.textContent = 'Run the demo to see how the steps connect.';
+  demoVisual.classList.remove('is-running','is-complete');demoRoute.style.strokeDashoffset='100';demoPacket.style.cx='60px';
+  demoNodes.forEach((node,i)=>{node.classList.remove('current','done');node.querySelector('text').textContent=`0${i+1}`;});
+  detail.querySelectorAll('#detail-steps li').forEach(step=>step.classList.remove('current','done'));
+}
 function closeWorkflow() { resetDemo(); detail.hidden = true; activeWorkflow = null; workflowButtons.forEach(button => { button.setAttribute('aria-expanded', 'false'); button.closest('.portfolio-card').classList.remove('active'); button.querySelector('span').textContent = '+'; }); }
 function openWorkflow(key) {
   if (activeWorkflow === key && !detail.hidden) { closeWorkflow(); return; }
   resetDemo(); activeWorkflow = key; const data = workflows[key];
   document.getElementById('detail-title').textContent = data.title;
   document.getElementById('detail-description').textContent = data.description;
+  demoVisual.querySelectorAll('.demo-labels span').forEach((label,i)=>{label.textContent=demoLabels[key][i];});
   const list = document.getElementById('detail-steps'); list.replaceChildren();
   data.steps.forEach(([title, description], index) => { const li = document.createElement('li'); const number = document.createElement('span'); number.textContent = `0${index + 1}`; const strong = document.createElement('strong'); strong.textContent = title; const p = document.createElement('p'); p.textContent = description; li.append(number, strong, p); list.append(li); });
   workflowButtons.forEach(button => { const selected = button.dataset.workflowButton === key; button.setAttribute('aria-expanded', String(selected)); button.closest('.portfolio-card').classList.toggle('active', selected); button.querySelector('span').textContent = selected ? '−' : '+'; });
@@ -44,10 +59,20 @@ workflowButtons.forEach(button => button.addEventListener('click', () => openWor
 document.getElementById('close-workflow').addEventListener('click', () => { const key = activeWorkflow; closeWorkflow(); document.querySelector(`[data-workflow-button="${key}"]`)?.focus({preventScroll:true}); });
 runButton.addEventListener('click', () => {
   if (!activeWorkflow) return;
-  clearTimeout(demoTimer); runButton.disabled = true; runButton.textContent = 'Demo running…';
-  const steps = [...document.querySelectorAll('#detail-steps li')]; steps.forEach(step => step.classList.remove('current', 'done'));
+  resetDemo(); runButton.disabled = true; runButton.textContent = 'Demo running…';demoVisual.classList.add('is-running');
+  const steps = [...document.querySelectorAll('#detail-steps li')];
   let index = 0;
-  const next = () => { if (index > 0) { steps[index - 1].classList.remove('current'); steps[index - 1].classList.add('done'); } if (index === steps.length) { status.textContent = 'Demo complete. This simulation did not send messages or change any business data.'; runButton.disabled = false; runButton.textContent = 'Run again'; return; } steps[index].classList.add('current'); status.textContent = `Demo step ${index + 1} of 4: ${workflows[activeWorkflow].steps[index][0]}`; index++; demoTimer = setTimeout(next, matchMedia('(prefers-reduced-motion: reduce)').matches ? 350 : 900); };
+  const next = () => {
+    if (index > 0) {
+      steps[index-1].classList.replace('current','done');demoNodes[index-1].classList.replace('current','done');demoNodes[index-1].querySelector('text').textContent='✓';
+    }
+    if (index === steps.length) {
+      demoVisual.classList.replace('is-running','is-complete');status.textContent = 'Demo complete. This simulation did not send messages or change any business data.';runButton.disabled=false;runButton.textContent='Run again';return;
+    }
+    steps[index].classList.add('current');demoNodes[index].classList.add('current');demoRoute.style.strokeDashoffset=String(100-index/3*100);demoPacket.style.cx=`${60+index/3*680}px`;
+    status.textContent=`Demo step ${index+1} of 4: ${workflows[activeWorkflow].steps[index][0]}`;
+    index++;demoTimer=setTimeout(next,matchMedia('(prefers-reduced-motion: reduce)').matches?350:1200);
+  };
   next();
 });
 document.getElementById('workflow-inquiry').addEventListener('click', () => { if (activeWorkflow) { document.getElementById('interest').value = workflows[activeWorkflow].interest; document.getElementById('challenge').focus({ preventScroll:true }); } });
@@ -101,6 +126,10 @@ form.addEventListener('submit', event => { event.preventDefault(); if (form.repo
 form.addEventListener('input', () => { result.hidden = true; });
 document.querySelectorAll('[data-intent="demo"]').forEach(link => link.addEventListener('click', () => { document.getElementById('interest').value = 'Book a demo call'; result.hidden = true; }));
 document.getElementById('year').textContent = String(new Date().getFullYear());
+
+document.querySelectorAll('.hero-visual,.contact-section').forEach(region=>{
+  const mesh=document.createElement('div');mesh.className='mesh-art';mesh.setAttribute('aria-hidden','true');region.prepend(mesh);
+});
 
 // Expose the visible calculator only; no contact data is transmitted by this tool.
 if (document.modelContext?.registerTool) {

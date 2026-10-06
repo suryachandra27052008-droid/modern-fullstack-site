@@ -2,3 +2,6 @@
 .openai
 .sites-runtime
 README.md
+.render-runtime
+.qa
+scripts
