@@ -56,6 +56,37 @@ if (matchMedia('(hover: hover) and (prefers-reduced-motion: no-preference)').mat
   document.querySelectorAll('.portfolio-card').forEach(card => { card.addEventListener('pointermove', event => { const bounds = card.getBoundingClientRect(); const x = (event.clientX - bounds.left) / bounds.width - .5; const y = (event.clientY - bounds.top) / bounds.height - .5; card.style.transform = `translateY(-7px) rotateY(${x * 5}deg) rotateX(${-y * 5}deg)`; }); card.addEventListener('pointerleave', () => { card.style.transform = ''; }); });
 }
 
+// Touch screens get a scroll reveal and a small perspective lift in place of hover.
+const mobileCardMedia = matchMedia('(max-width: 800px)');
+const reducedCardMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const scrollCards = [...document.querySelectorAll('.portfolio-card, .time-calculator, .inquiry-form')];
+let stopMobileCardEffects = () => {};
+function configureMobileCardEffects() {
+  stopMobileCardEffects();
+  scrollCards.forEach(card => { card.classList.remove('mobile-scroll-card', 'is-revealed', 'is-in-focus'); card.style.removeProperty('--card-drift'); card.style.removeProperty('--card-tilt'); });
+  if (!mobileCardMedia.matches || reducedCardMotion.matches || !('IntersectionObserver' in window)) return;
+  const visibleCards = new Set();
+  let frame = 0;
+  const render = () => {
+    frame = 0;
+    const height = window.innerHeight;
+    const positions = [...visibleCards].map(card => { const bounds = card.getBoundingClientRect(); return {card, progress:Math.max(-1, Math.min(1, (bounds.top + bounds.height / 2 - height / 2) / (height / 2)))}; });
+    positions.forEach(({card, progress}) => { card.style.setProperty('--card-drift', `${(progress * 5).toFixed(2)}px`); card.style.setProperty('--card-tilt', `${(-progress * 2.5).toFixed(2)}deg`); });
+  };
+  const requestFrame = () => { if (!frame) frame = requestAnimationFrame(render); };
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => { const card = entry.target; if (entry.isIntersecting) { card.classList.add('is-revealed'); visibleCards.add(card); } else { visibleCards.delete(card); } card.classList.toggle('is-in-focus', entry.isIntersecting && entry.intersectionRatio > .35); });
+    requestFrame();
+  }, {threshold:[0,.15,.35,.6],rootMargin:'0px 0px -6% 0px'});
+  scrollCards.forEach(card => { card.classList.add('mobile-scroll-card'); observer.observe(card); });
+  window.addEventListener('scroll', requestFrame, {passive:true});
+  window.addEventListener('resize', requestFrame, {passive:true});
+  stopMobileCardEffects = () => { observer.disconnect(); visibleCards.clear(); cancelAnimationFrame(frame); window.removeEventListener('scroll', requestFrame); window.removeEventListener('resize', requestFrame); };
+}
+mobileCardMedia.addEventListener('change', configureMobileCardEffects);
+reducedCardMotion.addEventListener('change', configureMobileCardEffects);
+configureMobileCardEffects();
+
 const form = document.getElementById('inquiry-form');
 const result = document.getElementById('inquiry-result');
 function prepareInquiry() {
