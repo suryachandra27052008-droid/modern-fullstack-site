@@ -11,7 +11,7 @@ Run `python -m http.server 4175 --bind 127.0.0.1 --directory dist` in this folde
 - Services and process navigation.
 - Three illustrative workflow demos, with simulated progress and no external side effects.
 - Manual-effort and capacity-value calculator: tasks per day × minutes per task × days per week ÷ 60. Monthly estimates use 4.33 weeks, an adjustable hourly staff cost, and estimated workload removal. Optional visitor-provided setup and recurring costs model net capacity value and illustrative payback. These are planning assumptions, not a quote or guaranteed cash savings.
-- Demo requests and business inquiries prepare a WhatsApp message for +91 9617310042. Visitors review the draft and send it themselves in WhatsApp. No server storage, automatic sending, or calendar reservation.
+- Demo requests and business inquiries prepare a WhatsApp message for +91 9617310042. Visitors review the draft and send it themselves in WhatsApp. An optional public webhook captures leads on submission. Its confirmed success or failure is shown; WhatsApp and direct calling remain available. An optional calendar link opens the configured booking provider. Form submission itself does not reserve a time.
 - Click-to-call and direct WhatsApp contact.
 
 The workflow portfolio contains examples, not claimed client projects. No customer testimonials, invented success rates, or guaranteed staffing reductions are used. Confirm that the listed service offerings match what the business can deliver before making the site public.
@@ -20,17 +20,17 @@ The workflow portfolio contains examples, not claimed client projects. No custom
 
 Vercel website: https://autixai-site.vercel.app. Project: "autixai-site" in suryachandra27052008-3423s-projects.
 
-Sites identity is stored in `.openai/hosting.json`. The site starts private. Source assets in `dist` are maintained directly; no build step or package installation is required. Caviar Dreams (body and controls) and Cinzel (headings) are self-hosted in `dist/fonts`, with attribution and license records. Light brown `#C7A98A` warms the glass surfaces and section backgrounds.
+Sites identity is stored in `.openai/hosting.json`. The site starts private. Source assets in `dist` are maintained directly; no build step or package installation is required. DM Sans (body and controls) and Cinzel (headings) are self-hosted in `dist/fonts`, with attribution and license records. Light brown `#C7A98A` warms the glass surfaces and section backgrounds.
 
 Vercel hosting is configured by `vercel.json` to serve `dist`, with no build step. `.vercelignore` excludes Sites metadata and local scratch files. The old Sites canonical URL is omitted from this Vercel version.
 
-On screens up to 800px wide, the portfolio, calculator, and inquiry cards reveal on scroll, gently tilt with scroll position, and gain a warm shadow while visible. Reduced-motion preferences disable these effects. Without JavaScript or IntersectionObserver support, all content remains fully visible.
+On screens up to 800px wide, all three portfolio cards form a sticky stacking deck at 96px, 112px, and 128px. A passive scroll listener batches reads with requestAnimationFrame; one card receives a subtle scale and border highlight. Reduced-motion users and short landscape screens get a flat deck. All cards remain available without JavaScript or IntersectionObserver.
 
 ## Compact mobile layout
 
-The full 3D scroll section and its frames, canvas runtime, and offline renderer have been removed. On screens up to 800px, services use native expandable rows, workflow examples use keyboard-accessible tabs, and the calculator and inquiry form can be expanded on demand. Contact and demo links open the inquiry form automatically. Desktop descriptions and the three-column workflow layout remain available.
+The full 3D scroll section and its frames, canvas runtime, and offline renderer have been removed. On screens up to 800px, services use native expandable rows, workflow examples form a scrollable deck with jump buttons, and the calculator can be expanded on demand. The inquiry form is always open. Contact and demo links open the inquiry form automatically. Desktop descriptions and the three-column workflow layout remain available.
 
-Mobile spacing and copy are shorter, the process uses a compact two-column layout, and a demo button remains visible in the phone header. The olive, beige, light brown, Cinzel, and Caviar Dreams design stays in place. A connected workflow map now selects one Sales, Support, or Operations example on every screen size, with keyboard-accessible tabs. Expanded details name the trigger, inputs, example tools, human review points, steps, and business output.
+Mobile spacing and copy are shorter, the process uses a compact two-column layout, and a demo button remains visible in the phone header. The olive, beige, light brown, and Cinzel identity stays in place, with DM Sans for legible body text, a minimum 12px type size, and darker secondary text. The connected workflow map uses keyboard-accessible tabs on desktop and shows all three examples on phones. Expanded details name the trigger, inputs, example tools, human review points, steps, and business output.
 
 ## Added business information
 
@@ -55,3 +55,22 @@ The source image and unused generated wordmark drafts are retained in `branding`
 ## Workflow motion
 
 The hero and portfolio workflows use travelling signals and staggered node highlights. Expanded demos include an animated four-step route, progress highlights, and completion checkmarks. These remain local simulations. Meshes appear in the hero and contact section, and decorative motion pauses off screen. Reduced-motion preferences disable animations.
+
+## Public website configuration
+
+Edit `dist/site-config.js` to connect real services. Leave unknown values empty. Do not put API keys, tokens, or other secrets in this public file.
+
+- `webhookUrl`: public lead endpoint accepting JSON POSTs. It must allow the production site origin through CORS. Receive name, business, phone, optional email, interest, challenge, source, and submission timestamp. Add server-side validation, deduplication, and spam controls at the endpoint. The UI confirms only successful HTTP responses; failures/timeouts keep the WhatsApp/call fallback available. Without this URL, no lead capture request is made.
+- `calendarUrl`: HTTPS Cal.com/Calendly booking page. The secondary booking CTA appears only when configured; no placeholder link is published.
+- `founderName` and `linkedinUrl`: optional verified founder details. Until supplied, the card identifies the AutixAI team and uses the existing direct business number.
+- `caseStudy`: optional `{title, result}` using verified project details. The current public callout is clearly labelled an illustrative example; no delivery-time or downtime claim is invented.
+
+Update the asset version query in all page HTML whenever scripts/config/styles change so returning visitors load the update. Configured webhook behavior also updates the inquiry notice on the home and trust pages.
+
+## Conversion, currency, and sharing
+
+The calculator has independent INR and USD scenarios, with starting hourly rates of INR 250 and USD 25. Switching preserves that scenario's entered costs; it does not perform FX conversion. Calculation inquiries append a concise current summary without duplicating it or overwriting business notes, choose the automation-opportunities interest, and focus the notes field.
+
+All three pages have absolute Open Graph/Twitter URLs and use `dist/assets/og-preview.png` (1200×630). The home page includes Organization and FAQPage JSON-LD matching the five visible FAQ answers. Search-engine display of enhanced results is not guaranteed.
+
+DM Sans is self-hosted as a 36.9KB Latin variable WOFF2 from Google Fonts, licensed under the SIL Open Font License included in `dist/fonts/DM-Sans-OFL.txt`. Source: https://github.com/google/fonts/tree/main/ofl/dmsans. Cinzel remains self-hosted. No framework or browser font-service request was added.

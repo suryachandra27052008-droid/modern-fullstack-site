@@ -1,13 +1,23 @@
 'use strict';
 const calculatorInputs = ['tasks', 'minutes', 'days'].map(id => document.getElementById(id));
 const costInputs = ['hourly-cost', 'coverage', 'setup-cost', 'running-cost'].map(id => document.getElementById(id));
-const rupees = new Intl.NumberFormat('en-IN', {style:'currency', currency:'INR', maximumFractionDigits:0});
+const siteConfig = window.AUTIXAI_CONFIG || {};
+const WEBHOOK_URL = siteConfig.webhookUrl || '';
+const currencies = {INR:{locale:'en-IN',symbol:'₹',hourly:250},USD:{locale:'en-US',symbol:'$',hourly:25}};
+let selectedCurrency = 'INR';
+let estimate = null;
+const currencyScenarios = {INR:['250','60','',''],USD:['25','60','','']};
+function formatMoney(value) {
+  return new Intl.NumberFormat(currencies[selectedCurrency].locale, {style:'currency',currency:selectedCurrency,maximumFractionDigits:0}).format(value);
+}
 function updateEstimate() {
   const [tasks, minutes, days] = calculatorInputs.map(input => Number(input.value));
   const valid = [...calculatorInputs, ...costInputs].every(input => input.validity.valid);
   document.getElementById('estimate-error').hidden = valid;
   document.getElementById('estimate-results').hidden = !valid;
-  if (!valid) return;
+  document.getElementById('estimate-inquiry').disabled = !valid;
+  costInputs.forEach(input => input.setAttribute('aria-invalid', String(!input.validity.valid)));
+  if (!valid) { estimate = null; return; }
   const [hourlyCost, coverage, setupCost, runningCost] = costInputs.map(input => Number(input.value));
   const weeklyHours = tasks * minutes * days / 60;
   const monthlyHours = weeklyHours * 4.33;
@@ -22,14 +32,25 @@ function updateEstimate() {
   document.getElementById('hours-result').replaceChildren(document.createTextNode(weeklyHours.toFixed(1)));
   const units = document.createElement('span'); units.textContent = ' hours / week';
   document.getElementById('hours-result').appendChild(units);
-  document.getElementById('manual-cost-result').textContent = rupees.format(monthlyHours * hourlyCost);
+  estimate = {tasks,minutes,days,weeklyHours,capacity,currency:selectedCurrency};
+  document.getElementById('manual-cost-result').textContent = formatMoney(monthlyHours * hourlyCost);
   document.getElementById('capacity-result').textContent = `${capacity.toFixed(1)} hours`;
-  document.getElementById('capacity-value-result').textContent = rupees.format(capacityValue);
-  document.getElementById('net-value-result').textContent = hasCosts ? rupees.format(netValue) : 'Add both cost estimates';
+  document.getElementById('capacity-value-result').textContent = formatMoney(capacityValue);
+  document.getElementById('net-value-result').textContent = hasCosts ? formatMoney(netValue) : 'Add both cost estimates';
   document.getElementById('payback-result').textContent = !hasCosts ? 'Add both cost estimates' : setupCost === 0 ? 'No setup cost' : netValue <= 0 ? 'Not recovered at these inputs' : `${(setupCost / netValue).toFixed(1)} months`;
 }
 [...calculatorInputs, ...costInputs].forEach(input => input.addEventListener('input', updateEstimate));
 updateEstimate();
+document.querySelectorAll('[data-currency]').forEach(button => button.addEventListener('click', () => {
+  const next = button.dataset.currency;
+  if (next === selectedCurrency) return;
+  currencyScenarios[selectedCurrency] = costInputs.map(input => input.value);
+  selectedCurrency = next;
+  costInputs.forEach((input,index) => { input.value = currencyScenarios[next][index]; });
+  document.querySelectorAll('[data-currency]').forEach(choice => choice.setAttribute('aria-pressed', String(choice.dataset.currency === next)));
+  document.querySelectorAll('[data-currency-symbol]').forEach(label => { label.textContent = `${currencies[next].symbol} ${next}`; });
+  updateEstimate();
+}));
 
 const workflows = {
   leads: { title: 'From new inquiry to qualified opportunity.', description: 'Connect your lead sources to your sales process. Repeat follow-ups can run automatically, with opt-out rules and a clear handover to your team.', interest: 'Sales and lead automation', steps: [ ['Capture the inquiry', 'Receive a lead from a website form, WhatsApp, or email.'], ['Qualify with AI', 'Collect useful details and identify the prospect’s needs.'], ['Update your CRM', 'Create or update the record and assign the right owner.'], ['Follow up thoughtfully', 'Send an appropriate next step and notify your sales team.'] ] },
@@ -77,10 +98,18 @@ function openWorkflow(key) {
   const list = document.getElementById('detail-steps'); list.replaceChildren();
   data.steps.forEach(([title, description], index) => { const li = document.createElement('li'); const number = document.createElement('span'); number.textContent = `0${index + 1}`; const strong = document.createElement('strong'); strong.textContent = title; const p = document.createElement('p'); p.textContent = description; li.append(number, strong, p); list.append(li); });
   workflowButtons.forEach(button => { const selected = button.dataset.workflowButton === key; button.setAttribute('aria-expanded', String(selected)); button.closest('.portfolio-card').classList.toggle('active', selected); button.querySelector('span').textContent = selected ? '−' : '+'; });
-  detail.hidden = false; detail.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' });
+  detail.hidden = false; detail.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+  document.getElementById('detail-title').focus({preventScroll:true});
 }
 workflowButtons.forEach(button => button.addEventListener('click', () => openWorkflow(button.dataset.workflowButton)));
 document.getElementById('close-workflow').addEventListener('click', () => { const key = activeWorkflow; closeWorkflow(); document.querySelector(`[data-workflow-button="${key}"]`)?.focus({preventScroll:true}); });
+detail.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && activeWorkflow) {
+    event.preventDefault();
+    const key = activeWorkflow; closeWorkflow();
+    document.querySelector(`[data-workflow-button="${key}"]`)?.focus({preventScroll:true});
+  }
+});
 runButton.addEventListener('click', () => {
   if (!activeWorkflow) return;
   resetDemo(); runButton.disabled = true; runButton.textContent = 'Demo running…';demoVisual.classList.add('is-running');
@@ -102,35 +131,40 @@ runButton.addEventListener('click', () => {
 document.getElementById('workflow-inquiry').addEventListener('click', () => { if (activeWorkflow) { inquiryDisclosure.open = true; result.hidden = true; document.getElementById('interest').value = workflows[activeWorkflow].interest; document.getElementById('challenge').focus({ preventScroll:true }); } });
 
 if (matchMedia('(hover: hover) and (prefers-reduced-motion: no-preference)').matches) {
-  document.querySelectorAll('.portfolio-card').forEach(card => { card.addEventListener('pointermove', event => { const bounds = card.getBoundingClientRect(); const x = (event.clientX - bounds.left) / bounds.width - .5; const y = (event.clientY - bounds.top) / bounds.height - .5; card.style.transform = `translateY(-7px) rotateY(${x * 5}deg) rotateX(${-y * 5}deg)`; }); card.addEventListener('pointerleave', () => { card.style.transform = ''; }); });
+  document.querySelectorAll('.portfolio-card').forEach(card => { card.addEventListener('pointermove', event => { if (matchMedia('(max-width: 800px), (prefers-reduced-motion: reduce)').matches) return; const bounds = card.getBoundingClientRect(); const x = (event.clientX - bounds.left) / bounds.width - .5; const y = (event.clientY - bounds.top) / bounds.height - .5; card.style.transform = `translateY(-7px) rotateY(${x * 5}deg) rotateX(${-y * 5}deg)`; }); card.addEventListener('pointerleave', () => { card.style.transform = ''; }); });
 }
 
-// Touch screens get a scroll reveal and a small perspective lift in place of hover.
+// At most one mobile workflow card is highlighted. Scroll reads are batched per frame.
 const mobileCardMedia = matchMedia('(max-width: 800px)');
 const reducedCardMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const scrollCards = [...document.querySelectorAll('.portfolio-card, .time-calculator, .inquiry-form')];
+const stackCards = [...document.querySelectorAll('.portfolio-card')];
+const cardDeck = document.querySelector('.portfolio-grid');
 let stopMobileCardEffects = () => {};
 function configureMobileCardEffects() {
   stopMobileCardEffects();
-  scrollCards.forEach(card => { card.classList.remove('mobile-scroll-card', 'is-revealed', 'is-in-focus'); card.style.removeProperty('--card-drift'); card.style.removeProperty('--card-tilt'); });
-  if (!mobileCardMedia.matches || reducedCardMotion.matches || !('IntersectionObserver' in window)) return;
-  const visibleCards = new Set();
+  stackCards.forEach(card => { card.classList.remove('is-stack-focus'); card.style.transform = ''; });
+  if (!mobileCardMedia.matches || reducedCardMotion.matches) return;
   let frame = 0;
+  let visible = true;
   const render = () => {
     frame = 0;
-    const height = window.innerHeight;
-    const positions = [...visibleCards].map(card => { const bounds = card.getBoundingClientRect(); return {card, progress:Math.max(-1, Math.min(1, (bounds.top + bounds.height / 2 - height / 2) / (height / 2)))}; });
-    positions.forEach(({card, progress}) => { card.style.setProperty('--card-drift', `${(progress * 5).toFixed(2)}px`); card.style.setProperty('--card-tilt', `${(-progress * 2.5).toFixed(2)}deg`); });
+    const positions = stackCards.map((card,index) => ({card,index,bounds:card.getBoundingClientRect(),top:96+index*16}));
+    const inView = positions.filter(({bounds,top}) => bounds.bottom > top && bounds.top < window.innerHeight);
+    const pinned = inView.filter(({bounds,top}) => bounds.top <= top+2);
+    const focused = (pinned.at(-1) || inView[0])?.card;
+    stackCards.forEach(card => card.classList.toggle('is-stack-focus', card === focused));
   };
-  const requestFrame = () => { if (!frame) frame = requestAnimationFrame(render); };
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => { const card = entry.target; if (entry.isIntersecting) { card.classList.add('is-revealed'); visibleCards.add(card); } else { visibleCards.delete(card); } card.classList.toggle('is-in-focus', entry.isIntersecting && entry.intersectionRatio > .35); });
-    requestFrame();
-  }, {threshold:[0,.15,.35,.6],rootMargin:'0px 0px -6% 0px'});
-  scrollCards.forEach(card => { card.classList.add('mobile-scroll-card'); observer.observe(card); });
+  const requestFrame = () => { if (visible && !frame) frame = requestAnimationFrame(render); };
+  const observer = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
+    visible = entries[0].isIntersecting;
+    if (visible) requestFrame();
+    else stackCards.forEach(card => card.classList.remove('is-stack-focus'));
+  }, {rootMargin:'100px'}) : null;
+  observer?.observe(cardDeck);
   window.addEventListener('scroll', requestFrame, {passive:true});
   window.addEventListener('resize', requestFrame, {passive:true});
-  stopMobileCardEffects = () => { observer.disconnect(); visibleCards.clear(); cancelAnimationFrame(frame); window.removeEventListener('scroll', requestFrame); window.removeEventListener('resize', requestFrame); };
+  requestFrame();
+  stopMobileCardEffects = () => { observer?.disconnect(); cancelAnimationFrame(frame); window.removeEventListener('scroll', requestFrame); window.removeEventListener('resize', requestFrame); };
 }
 mobileCardMedia.addEventListener('change', configureMobileCardEffects);
 reducedCardMotion.addEventListener('change', configureMobileCardEffects);
@@ -138,16 +172,62 @@ configureMobileCardEffects();
 
 const form = document.getElementById('inquiry-form');
 const result = document.getElementById('inquiry-result');
+const formFields = [...form.querySelectorAll('input,select,textarea')];
+formFields.forEach(input => {
+  const error = document.createElement('span');
+  error.id = `${input.id}-error`; error.className = 'field-error'; error.hidden = true;
+  input.setAttribute('aria-describedby',error.id); input.after(error);
+});
+function validateField(input, showError = true) {
+  input.setCustomValidity('');
+  if (input.required && !input.value.trim()) input.setCustomValidity('Please complete this field.');
+  if (input.id === 'phone' && input.value.trim() && input.value.replace(/\D/g,'').length < 7) input.setCustomValidity('Enter a contact number containing at least 7 digits.');
+  const valid = input.validity.valid;
+  const error = document.getElementById(`${input.id}-error`);
+  error.textContent = valid ? '' : input.validity.typeMismatch ? 'Enter a valid email address.' : input.id === 'phone' ? 'Enter a contact number with 7–25 digits, spaces, or phone symbols.' : input.validationMessage;
+  error.hidden = valid || !showError;
+  input.setAttribute('aria-invalid', String(!valid && showError));
+  return valid;
+}
+form.noValidate = true;
+const pendingCaptures = new Set();
+let currentCapture = '';
+function captureLead(values) {
+  const captureStatus = document.getElementById('capture-status');
+  if (!WEBHOOK_URL) {
+    captureStatus.textContent = 'Send the WhatsApp draft or call us to complete your inquiry.';
+    return;
+  }
+  const signature = JSON.stringify(values);
+  currentCapture = signature;
+  if (pendingCaptures.has(signature)) return;
+  pendingCaptures.add(signature);
+  captureStatus.textContent = 'Sending your inquiry. You can also continue on WhatsApp or call us.';
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  fetch(WEBHOOK_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...values,source:'AutixAI website',submittedAt:new Date().toISOString()}),signal:controller.signal,keepalive:true})
+    .then(response => { if (!response.ok) throw new Error('Lead endpoint rejected the request'); if(currentCapture === signature)captureStatus.textContent = 'Your inquiry was received. Continue on WhatsApp if you’d like to chat.'; })
+    .catch(() => { if(currentCapture === signature)captureStatus.textContent = 'We couldn’t confirm receipt. Please send the WhatsApp draft or call us so we receive your inquiry.'; })
+    .finally(() => { clearTimeout(timeout); pendingCaptures.delete(signature); });
+}
 function prepareInquiry() {
   const values = Object.fromEntries(new FormData(form));
+  Object.keys(values).forEach(key => { values[key] = values[key].trim(); });
   const message = ['Hi AutixAI! I’d like to discuss automation for my business.', '', `Name: ${values.name.trim()}`, `Business: ${values.business.trim()}`, `Phone: ${values.phone.trim()}`, ...(values.email.trim() ? [`Email: ${values.email.trim()}`] : []), `Interested in: ${values.interest}`, '', `About my business / what I’d like to automate:`, values.challenge.trim()].join('\n');
   document.getElementById('inquiry-preview').textContent = message;
   document.getElementById('send-inquiry').href = `https://wa.me/919617310042?text=${encodeURIComponent(message)}`;
   result.hidden = false;
+  captureLead(values);
   result.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' });
 }
-form.addEventListener('submit', event => { event.preventDefault(); if (form.reportValidity()) prepareInquiry(); });
-form.addEventListener('input', () => { result.hidden = true; });
+form.addEventListener('submit', event => {
+  event.preventDefault();
+  const invalid = formFields.filter(input => !validateField(input));
+  document.getElementById('form-error').hidden = invalid.length === 0;
+  if (invalid.length) { invalid[0].focus(); return; }
+  prepareInquiry();
+});
+form.addEventListener('input', event => { result.hidden = true; if (formFields.includes(event.target)) validateField(event.target); });
 form.querySelector('[type="submit"]').disabled = false;
 document.querySelectorAll('[data-intent="demo"]').forEach(link => link.addEventListener('click', () => { document.getElementById('interest').value = 'Book a demo call'; result.hidden = true; }));
 document.querySelectorAll('.hero-visual,.contact-section').forEach(region=>{
@@ -164,19 +244,34 @@ const inquiryDisclosure = document.querySelector('.inquiry-disclosure');
 const calculatorDisclosure = document.querySelector('.calculator-disclosure');
 let selectedWorkflow = 'leads';
 
-function showWorkflowTab(key) {
+function showWorkflowTab(key, navigate = false) {
   selectedWorkflow = key;
-  tabButtons.forEach(button=>{const selected=button.dataset.workflowTab===key;button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;});
-  workflowCards.forEach(card=>{
-    card.hidden=card.dataset.workflow!==key;
-    card.setAttribute('role','tabpanel');card.setAttribute('aria-labelledby',`workflow-tab-${card.dataset.workflow}`);card.tabIndex=0;
+  const compact = compactLayout.matches;
+  tabButtons.forEach(button=>{
+    const selected=button.dataset.workflowTab===key;
+    button.tabIndex=compact || selected?0:-1;
+    button.setAttribute('role',compact?'button':'tab');
+    if(compact)button.removeAttribute('aria-selected');
+    else button.setAttribute('aria-selected',String(selected));
   });
-  if(activeWorkflow && activeWorkflow!==key)closeWorkflow();
+  workflowTabs.setAttribute('role',compact?'group':'tablist');
+  workflowTabs.setAttribute('aria-label',compact?'Jump to a workflow':'Choose a business workflow');
+  workflowCards.forEach(card=>{
+    card.hidden=!compact && card.dataset.workflow!==key;
+    if(compact){card.removeAttribute('role');card.removeAttribute('aria-labelledby');card.removeAttribute('tabindex');}
+    else {card.setAttribute('role','tabpanel');card.setAttribute('aria-labelledby',`workflow-tab-${card.dataset.workflow}`);card.tabIndex=0;}
+  });
+  if(!compact && activeWorkflow && activeWorkflow!==key)closeWorkflow();
+  if(compact && navigate) {
+    const card = document.querySelector(`[data-workflow="${key}"]`);
+    card.scrollIntoView({behavior:reducedCardMotion.matches?'instant':'smooth',block:'start'});
+    card.querySelector('.portfolio-button').focus({preventScroll:true});
+  }
 }
 function configurePhoneLayout() {
   const compact=compactLayout.matches;
   serviceRows.forEach(row=>{row.open=!compact;row.querySelector('summary').tabIndex=compact?0:-1;});
-  inquiryDisclosure.open=!compact;calculatorDisclosure.open=!compact;
+  inquiryDisclosure.open=true;calculatorDisclosure.open=!compact;
   workflowTabs.hidden=false;
   showWorkflowTab(activeWorkflow || selectedWorkflow);
 }
@@ -184,7 +279,7 @@ serviceRows.forEach(row=>row.addEventListener('toggle',()=>{
   if(compactLayout.matches && row.open)serviceRows.forEach(other=>{if(other!==row)other.open=false;});
 }));
 tabButtons.forEach((button,index)=>{
-  button.addEventListener('click',()=>showWorkflowTab(button.dataset.workflowTab));
+  button.addEventListener('click',()=>showWorkflowTab(button.dataset.workflowTab,true));
   button.addEventListener('keydown',event=>{
     let next=index;
     if(event.key==='ArrowRight')next=(index+1)%tabButtons.length;
@@ -198,6 +293,29 @@ tabButtons.forEach((button,index)=>{
 document.querySelectorAll('a[href="#contact"]').forEach(link=>link.addEventListener('click',()=>{inquiryDisclosure.open=true;}));
 compactLayout.addEventListener('change',configurePhoneLayout);
 configurePhoneLayout();
+// The main lead funnel stays visible, including after keyboard disclosure interactions.
+inquiryDisclosure.addEventListener('toggle', () => { if (!inquiryDisclosure.open) inquiryDisclosure.open = true; });
+
+let lastCalculationSummary = '';
+document.getElementById('estimate-inquiry').addEventListener('click', () => {
+  updateEstimate();
+  if (!estimate) return;
+  const challenge = document.getElementById('challenge');
+  const summary = `Automation estimate: ${estimate.tasks} tasks/day × ${estimate.minutes} minutes × ${estimate.days} days/week; ${estimate.weeklyHours.toFixed(1)} manual hours/week; ${estimate.capacity.toFixed(1)} hours/month potentially returned. Currency: ${estimate.currency}. Planning assumptions, not guaranteed savings.`;
+  const existing = challenge.value.replace(lastCalculationSummary,'').trim();
+  if (existing.length + summary.length + 2 > challenge.maxLength) {
+    document.getElementById('calculation-transfer-status').textContent = 'Please shorten your business notes so we can add the calculation.';
+    inquiryDisclosure.open = true; challenge.focus(); return;
+  }
+  challenge.value = [existing,summary].filter(Boolean).join('\n\n');
+  lastCalculationSummary = summary;
+  document.getElementById('interest').value = 'Find automation opportunities';
+  result.hidden = true; inquiryDisclosure.open = true;
+  validateField(challenge);
+  document.getElementById('calculation-transfer-status').textContent = 'Your calculation has been added to the inquiry below.';
+  document.getElementById('contact').scrollIntoView({behavior:reducedCardMotion.matches?'instant':'smooth',block:'start'});
+  challenge.focus({preventScroll:true});
+});
 if (location.hash === '#contact') {
   inquiryDisclosure.open = true;
   const intent = new URLSearchParams(location.search).get('intent');
@@ -234,6 +352,9 @@ filmButton.addEventListener('click', () => {
   video.play().catch(() => { document.getElementById('film-status').textContent = 'Use the video controls to play. Illustrative workflow; no live data.'; });
 });
 video.addEventListener('error', () => { document.getElementById('film-status').textContent = 'The video could not load. You can read the transcript below or run the interactive workflow demo.'; });
+film.addEventListener('keydown', event => {
+  if (event.key === 'Escape') { event.preventDefault(); video.pause(); film.hidden = true; filmButton.setAttribute('aria-expanded','false'); filmButton.focus(); }
+});
 
 if('IntersectionObserver' in window) {
   const motion=new IntersectionObserver(entries=>entries.forEach(entry=>entry.target.classList.toggle('motion-visible',entry.isIntersecting)),{rootMargin:'60px'});
