@@ -131,6 +131,57 @@ document.querySelectorAll('.hero-visual,.contact-section').forEach(region=>{
   const mesh=document.createElement('div');mesh.className='mesh-art';mesh.setAttribute('aria-hidden','true');region.prepend(mesh);
 });
 
+// Keep mobile journeys compact, with the full content available on demand.
+const compactLayout = matchMedia('(max-width: 800px)');
+const serviceRows = [...document.querySelectorAll('details.service')];
+const workflowTabs = document.querySelector('.workflow-tabs');
+const tabButtons = [...workflowTabs.querySelectorAll('[data-workflow-tab]')];
+const workflowCards = [...document.querySelectorAll('.portfolio-card')];
+const inquiryDisclosure = document.querySelector('.inquiry-disclosure');
+const calculatorDisclosure = document.querySelector('.calculator-disclosure');
+let selectedWorkflow = 'leads';
+
+function showWorkflowTab(key) {
+  selectedWorkflow = key;
+  tabButtons.forEach(button=>{const selected=button.dataset.workflowTab===key;button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;});
+  workflowCards.forEach(card=>{
+    card.hidden=compactLayout.matches && card.dataset.workflow!==key;
+    if(compactLayout.matches){card.setAttribute('role','tabpanel');card.setAttribute('aria-labelledby',`workflow-tab-${card.dataset.workflow}`);card.tabIndex=0;}
+    else{card.removeAttribute('role');card.removeAttribute('aria-labelledby');card.removeAttribute('tabindex');}
+  });
+  if(activeWorkflow && activeWorkflow!==key && compactLayout.matches)closeWorkflow();
+}
+function configurePhoneLayout() {
+  const compact=compactLayout.matches;
+  serviceRows.forEach(row=>{row.open=!compact;row.querySelector('summary').tabIndex=compact?0:-1;});
+  inquiryDisclosure.open=!compact;calculatorDisclosure.open=!compact;
+  workflowTabs.hidden=!compact;
+  showWorkflowTab(activeWorkflow || selectedWorkflow);
+}
+serviceRows.forEach(row=>row.addEventListener('toggle',()=>{
+  if(compactLayout.matches && row.open)serviceRows.forEach(other=>{if(other!==row)other.open=false;});
+}));
+tabButtons.forEach((button,index)=>{
+  button.addEventListener('click',()=>showWorkflowTab(button.dataset.workflowTab));
+  button.addEventListener('keydown',event=>{
+    let next=index;
+    if(event.key==='ArrowRight')next=(index+1)%tabButtons.length;
+    else if(event.key==='ArrowLeft')next=(index+tabButtons.length-1)%tabButtons.length;
+    else if(event.key==='Home')next=0;
+    else if(event.key==='End')next=tabButtons.length-1;
+    else return;
+    event.preventDefault();showWorkflowTab(tabButtons[next].dataset.workflowTab);tabButtons[next].focus();
+  });
+});
+document.querySelectorAll('a[href="#contact"]').forEach(link=>link.addEventListener('click',()=>{inquiryDisclosure.open=true;}));
+compactLayout.addEventListener('change',configurePhoneLayout);
+configurePhoneLayout();
+
+if('IntersectionObserver' in window) {
+  const motion=new IntersectionObserver(entries=>entries.forEach(entry=>entry.target.classList.toggle('motion-visible',entry.isIntersecting)),{rootMargin:'60px'});
+  document.querySelectorAll('.hero-visual,.portfolio-section,.contact-section').forEach(region=>motion.observe(region));
+}
+
 // Expose the visible calculator only; no contact data is transmitted by this tool.
 if (document.modelContext?.registerTool) {
   const lifecycle = new AbortController();
@@ -145,6 +196,7 @@ if (document.modelContext?.registerTool) {
         if (!input || typeof input !== 'object' || Object.keys(input).some(key => !['tasksPerDay','minutesPerTask','workingDays'].includes(key))) throw new Error('Provide only tasksPerDay, minutesPerTask and workingDays.');
         const values = [input.tasksPerDay, input.minutesPerTask, input.workingDays];
         if (values.some((value,index) => !Number.isInteger(value) || value < 1 || value > [100,30,7][index])) throw new Error('Values must be whole numbers within the calculator ranges.');
+        calculatorDisclosure.open = true;
         values.forEach((value,index) => { calculatorInputs[index].value = String(value); }); updateEstimate();
         return {manualHoursPerWeek:Number((values[0]*values[1]*values[2]/60).toFixed(1)),note:'Current manual effort only; actual savings vary.'};
       }

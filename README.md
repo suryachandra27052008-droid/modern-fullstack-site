@@ -26,10 +26,12 @@ Vercel hosting is configured by `vercel.json` to serve `dist`, with no build ste
 
 On screens up to 800px wide, the portfolio, calculator, and inquiry cards reveal on scroll, gently tilt with scroll position, and gain a warm shadow while visible. Reduced-motion preferences disable these effects. Without JavaScript or IntersectionObserver support, all content remains fully visible.
 
-## Premium motion
+## Compact mobile layout
 
-The connected-business section uses 120 offline-rendered 3D WebP frames: 1440 × 1200 for desktop and 720 × 600 for phones. The canvas scrubs in both directions using requestAnimationFrame, so updates follow the display refresh rate; actual frame rate depends on the device and scrolling speed. Compressed frames load near the section, while decoded frames are limited to 16 on desktop and 12 on phones. Data Saver fetches every fourth mobile frame. Reduced motion and unsupported browsers show the poster and accessible chapter buttons. With JavaScript disabled, the section remains one screen tall.
+The full 3D scroll section and its frames, canvas runtime, and offline renderer have been removed. On screens up to 800px, services use native expandable rows, workflow examples use keyboard-accessible tabs, and the calculator and inquiry form can be expanded on demand. Contact and demo links open the inquiry form automatically. Desktop descriptions and the three-column workflow layout remain available.
 
-The hero and portfolio workflows use travelling signals and staggered node highlights. Expanded demos include an animated four-step route, progress highlights, and completion checkmarks. These remain local simulations. Olive/champagne meshes appear in the hero, 3D sequence and contact section; decorative animations pause off screen.
+Mobile spacing and copy are shorter, the process uses a compact two-column layout, and a demo button remains visible in the phone header. The olive, beige, light brown, Cinzel, and Caviar Dreams design stays in place.
 
-To regenerate the original 3D asset, install scripts/render-requirements.txt and run scripts/render-sequence.py with Python. The renderer uses a standalone OpenGL context; no GPU renderer or rendering dependency is shipped to visitors.
+## Workflow motion
+
+The hero and portfolio workflows use travelling signals and staggered node highlights. Expanded demos include an animated four-step route, progress highlights, and completion checkmarks. These remain local simulations. Meshes appear in the hero and contact section, and decorative motion pauses off screen. Reduced-motion preferences disable animations.
