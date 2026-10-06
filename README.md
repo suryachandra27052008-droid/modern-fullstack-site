@@ -10,7 +10,7 @@ Run `python -m http.server 4175 --bind 127.0.0.1 --directory dist` in this folde
 
 - Services and process navigation.
 - Three illustrative workflow demos, with simulated progress and no external side effects.
-- Manual-effort calculator: tasks per day × minutes per task × days per week ÷ 60. This estimates workload, not guaranteed savings.
+- Manual-effort and capacity-value calculator: tasks per day × minutes per task × days per week ÷ 60. Monthly estimates use 4.33 weeks, an adjustable hourly staff cost, and estimated workload removal. Optional visitor-provided setup and recurring costs model net capacity value and illustrative payback. These are planning assumptions, not a quote or guaranteed cash savings.
 - Demo requests and business inquiries prepare a WhatsApp message for +91 9617310042. Visitors review the draft and send it themselves in WhatsApp. No server storage, automatic sending, or calendar reservation.
 - Click-to-call and direct WhatsApp contact.
 
@@ -30,7 +30,21 @@ On screens up to 800px wide, the portfolio, calculator, and inquiry cards reveal
 
 The full 3D scroll section and its frames, canvas runtime, and offline renderer have been removed. On screens up to 800px, services use native expandable rows, workflow examples use keyboard-accessible tabs, and the calculator and inquiry form can be expanded on demand. Contact and demo links open the inquiry form automatically. Desktop descriptions and the three-column workflow layout remain available.
 
-Mobile spacing and copy are shorter, the process uses a compact two-column layout, and a demo button remains visible in the phone header. The olive, beige, light brown, Cinzel, and Caviar Dreams design stays in place.
+Mobile spacing and copy are shorter, the process uses a compact two-column layout, and a demo button remains visible in the phone header. The olive, beige, light brown, Cinzel, and Caviar Dreams design stays in place. A connected workflow map now selects one Sales, Support, or Operations example on every screen size, with keyboard-accessible tabs. Expanded details name the trigger, inputs, example tools, human review points, steps, and business output.
+
+## Added business information
+
+- The contact section explains the demo agenda, takeaways, and preparation. Requests still prepare a WhatsApp draft; no automated booking or fixed call duration is claimed.
+- Project-stage disclosures explain scoped deliverables. A guided starting-point selector recommends discovery, a scoped build, or a workflow review and sets the inquiry interest.
+- `/pricing/` describes project scoping, cost drivers, recurring provider costs, and handover without invented fixed fees.
+- `/trust/` describes design questions and scope-dependent data, permissions, AI providers, human approval, ownership, and support. It distinguishes these from factual website inquiry behavior; it makes no certification claims.
+- Shared navigation and year rendering live in `dist/common.js`; secondary pages do not load the home-page app runtime.
+
+## Workflow film
+
+`dist/media/lead-workflow.mp4` is an original, silent 36-second H.264 diagram animation (960×540, 24fps). It illustrates inquiry capture, AI qualification, CRM sync, human approval, and approved follow-up. It is not a customer recording. A poster, English WebVTT captions, and HTML transcript are included. The video source is assigned only when the visitor opens the player; controls support normal play, pause, and seeking. Closing the player pauses playback.
+
+To regenerate it, install Pillow in your local Python environment, ensure FFmpeg is on PATH, and run `python scripts/render-workflow-film.py`. The rendering script is excluded from Vercel deployment.
 
 ## Workflow motion
 

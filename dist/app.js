@@ -1,26 +1,45 @@
 'use strict';
-const toggle = document.querySelector('.menu-toggle');
-const nav = document.querySelector('#mobile-nav');
-toggle.addEventListener('click', () => { const open = toggle.getAttribute('aria-expanded') === 'true'; toggle.setAttribute('aria-expanded', String(!open)); toggle.setAttribute('aria-label', open ? 'Open navigation' : 'Close navigation'); nav.hidden = open; });
-nav.querySelectorAll('a').forEach(link => link.addEventListener('click', () => { nav.hidden = true; toggle.setAttribute('aria-expanded', 'false'); toggle.setAttribute('aria-label', 'Open navigation'); }));
-
 const calculatorInputs = ['tasks', 'minutes', 'days'].map(id => document.getElementById(id));
+const costInputs = ['hourly-cost', 'coverage', 'setup-cost', 'running-cost'].map(id => document.getElementById(id));
+const rupees = new Intl.NumberFormat('en-IN', {style:'currency', currency:'INR', maximumFractionDigits:0});
 function updateEstimate() {
   const [tasks, minutes, days] = calculatorInputs.map(input => Number(input.value));
+  const valid = [...calculatorInputs, ...costInputs].every(input => input.validity.valid);
+  document.getElementById('estimate-error').hidden = valid;
+  document.getElementById('estimate-results').hidden = !valid;
+  if (!valid) return;
+  const [hourlyCost, coverage, setupCost, runningCost] = costInputs.map(input => Number(input.value));
+  const weeklyHours = tasks * minutes * days / 60;
+  const monthlyHours = weeklyHours * 4.33;
+  const capacity = monthlyHours * coverage / 100;
+  const capacityValue = capacity * hourlyCost;
+  const hasCosts = costInputs[2].value !== '' && costInputs[3].value !== '';
+  const netValue = capacityValue - runningCost;
   document.getElementById('tasks-output').textContent = String(tasks);
   document.getElementById('minutes-output').textContent = `${minutes} min`;
   document.getElementById('days-output').textContent = String(days);
-  document.getElementById('hours-result').replaceChildren(document.createTextNode((tasks * minutes * days / 60).toFixed(1)));
+  document.getElementById('coverage-output').textContent = `${coverage}%`;
+  document.getElementById('hours-result').replaceChildren(document.createTextNode(weeklyHours.toFixed(1)));
   const units = document.createElement('span'); units.textContent = ' hours / week';
   document.getElementById('hours-result').appendChild(units);
+  document.getElementById('manual-cost-result').textContent = rupees.format(monthlyHours * hourlyCost);
+  document.getElementById('capacity-result').textContent = `${capacity.toFixed(1)} hours`;
+  document.getElementById('capacity-value-result').textContent = rupees.format(capacityValue);
+  document.getElementById('net-value-result').textContent = hasCosts ? rupees.format(netValue) : 'Add both cost estimates';
+  document.getElementById('payback-result').textContent = !hasCosts ? 'Add both cost estimates' : setupCost === 0 ? 'No setup cost' : netValue <= 0 ? 'Not recovered at these inputs' : `${(setupCost / netValue).toFixed(1)} months`;
 }
-calculatorInputs.forEach(input => input.addEventListener('input', updateEstimate));
+[...calculatorInputs, ...costInputs].forEach(input => input.addEventListener('input', updateEstimate));
 updateEstimate();
 
 const workflows = {
   leads: { title: 'From new inquiry to qualified opportunity.', description: 'Connect your lead sources to your sales process. Repeat follow-ups can run automatically, with opt-out rules and a clear handover to your team.', interest: 'Sales and lead automation', steps: [ ['Capture the inquiry', 'Receive a lead from a website form, WhatsApp, or email.'], ['Qualify with AI', 'Collect useful details and identify the prospect’s needs.'], ['Update your CRM', 'Create or update the record and assign the right owner.'], ['Follow up thoughtfully', 'Send an appropriate next step and notify your sales team.'] ] },
   support: { title: 'A faster answer. A thoughtful handover.', description: 'An assistant uses your approved business knowledge to respond to routine questions. When a request needs judgement or the answer is unclear, it hands over with the conversation context.', interest: 'AI customer support', steps: [ ['Receive the question', 'Capture a customer request through your connected channel.'], ['Find relevant knowledge', 'Look up information in your approved business resources.'], ['Answer or escalate', 'Respond to supported questions; route exceptions to a person.'], ['Keep the context', 'Log the conversation so the team can pick up smoothly.'] ] },
   operations: { title: 'Turn paperwork into a connected process.', description: 'Extract details from incoming documents, flag missing information, and send records for review. After approval, update the connected system and notify the people who need to know.', interest: 'Reporting and operations', steps: [ ['Receive a document', 'An attachment or connected upload triggers the workflow.'], ['Extract and check', 'Read relevant fields and flag missing or inconsistent details.'], ['Request human approval', 'A team member reviews the details before committing changes.'], ['Update and notify', 'Write the approved record and send the next task or alert.'] ] }
+};
+const workflowFacts = {
+  leads: [['Trigger & inputs', 'A new website, email, or WhatsApp inquiry; contact details and consent where required.'], ['Example tools', 'Website form / WhatsApp, HubSpot or your CRM, n8n / Make, and an approved AI provider.'], ['Team control', 'Review uncertain leads and approve sensitive messages; respect opt-outs.'], ['Business output', 'A structured CRM lead, assigned owner, and appropriate next step.']],
+  support: [['Trigger & inputs', 'An incoming customer question and your approved support knowledge.'], ['Example tools', 'Website chat / WhatsApp, a business knowledge source, help desk or CRM, and an approved AI provider.'], ['Team control', 'Escalate uncertain answers and requests needing judgement, with conversation context.'], ['Business output', 'A supported answer or a ticket ready for a person to handle.']],
+  operations: [['Trigger & inputs', 'A document arrives through a connected inbox or upload.'], ['Example tools', 'Google Workspace, document extraction, n8n / Make, and a spreadsheet or business system.'], ['Team control', 'Check missing fields and require approval before writing the final record.'], ['Business output', 'An approved, structured record and the next task or notification.']]
 };
 const detail = document.getElementById('workflow-detail');
 const workflowButtons = document.querySelectorAll('[data-workflow-button]');
@@ -49,6 +68,11 @@ function openWorkflow(key) {
   resetDemo(); activeWorkflow = key; const data = workflows[key];
   document.getElementById('detail-title').textContent = data.title;
   document.getElementById('detail-description').textContent = data.description;
+  const facts = document.getElementById('workflow-facts'); facts.replaceChildren();
+  workflowFacts[key].forEach(([label, value]) => {
+    const group = document.createElement('div'); const dt = document.createElement('dt'); const dd = document.createElement('dd');
+    dt.textContent = label; dd.textContent = value; group.append(dt, dd); facts.append(group);
+  });
   demoVisual.querySelectorAll('.demo-labels span').forEach((label,i)=>{label.textContent=demoLabels[key][i];});
   const list = document.getElementById('detail-steps'); list.replaceChildren();
   data.steps.forEach(([title, description], index) => { const li = document.createElement('li'); const number = document.createElement('span'); number.textContent = `0${index + 1}`; const strong = document.createElement('strong'); strong.textContent = title; const p = document.createElement('p'); p.textContent = description; li.append(number, strong, p); list.append(li); });
@@ -75,7 +99,7 @@ runButton.addEventListener('click', () => {
   };
   next();
 });
-document.getElementById('workflow-inquiry').addEventListener('click', () => { if (activeWorkflow) { document.getElementById('interest').value = workflows[activeWorkflow].interest; document.getElementById('challenge').focus({ preventScroll:true }); } });
+document.getElementById('workflow-inquiry').addEventListener('click', () => { if (activeWorkflow) { inquiryDisclosure.open = true; result.hidden = true; document.getElementById('interest').value = workflows[activeWorkflow].interest; document.getElementById('challenge').focus({ preventScroll:true }); } });
 
 if (matchMedia('(hover: hover) and (prefers-reduced-motion: no-preference)').matches) {
   document.querySelectorAll('.portfolio-card').forEach(card => { card.addEventListener('pointermove', event => { const bounds = card.getBoundingClientRect(); const x = (event.clientX - bounds.left) / bounds.width - .5; const y = (event.clientY - bounds.top) / bounds.height - .5; card.style.transform = `translateY(-7px) rotateY(${x * 5}deg) rotateX(${-y * 5}deg)`; }); card.addEventListener('pointerleave', () => { card.style.transform = ''; }); });
@@ -124,9 +148,8 @@ function prepareInquiry() {
 }
 form.addEventListener('submit', event => { event.preventDefault(); if (form.reportValidity()) prepareInquiry(); });
 form.addEventListener('input', () => { result.hidden = true; });
+form.querySelector('[type="submit"]').disabled = false;
 document.querySelectorAll('[data-intent="demo"]').forEach(link => link.addEventListener('click', () => { document.getElementById('interest').value = 'Book a demo call'; result.hidden = true; }));
-document.getElementById('year').textContent = String(new Date().getFullYear());
-
 document.querySelectorAll('.hero-visual,.contact-section').forEach(region=>{
   const mesh=document.createElement('div');mesh.className='mesh-art';mesh.setAttribute('aria-hidden','true');region.prepend(mesh);
 });
@@ -145,17 +168,16 @@ function showWorkflowTab(key) {
   selectedWorkflow = key;
   tabButtons.forEach(button=>{const selected=button.dataset.workflowTab===key;button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;});
   workflowCards.forEach(card=>{
-    card.hidden=compactLayout.matches && card.dataset.workflow!==key;
-    if(compactLayout.matches){card.setAttribute('role','tabpanel');card.setAttribute('aria-labelledby',`workflow-tab-${card.dataset.workflow}`);card.tabIndex=0;}
-    else{card.removeAttribute('role');card.removeAttribute('aria-labelledby');card.removeAttribute('tabindex');}
+    card.hidden=card.dataset.workflow!==key;
+    card.setAttribute('role','tabpanel');card.setAttribute('aria-labelledby',`workflow-tab-${card.dataset.workflow}`);card.tabIndex=0;
   });
-  if(activeWorkflow && activeWorkflow!==key && compactLayout.matches)closeWorkflow();
+  if(activeWorkflow && activeWorkflow!==key)closeWorkflow();
 }
 function configurePhoneLayout() {
   const compact=compactLayout.matches;
   serviceRows.forEach(row=>{row.open=!compact;row.querySelector('summary').tabIndex=compact?0:-1;});
   inquiryDisclosure.open=!compact;calculatorDisclosure.open=!compact;
-  workflowTabs.hidden=!compact;
+  workflowTabs.hidden=false;
   showWorkflowTab(activeWorkflow || selectedWorkflow);
 }
 serviceRows.forEach(row=>row.addEventListener('toggle',()=>{
@@ -176,6 +198,42 @@ tabButtons.forEach((button,index)=>{
 document.querySelectorAll('a[href="#contact"]').forEach(link=>link.addEventListener('click',()=>{inquiryDisclosure.open=true;}));
 compactLayout.addEventListener('change',configurePhoneLayout);
 configurePhoneLayout();
+if (location.hash === '#contact') {
+  inquiryDisclosure.open = true;
+  const intent = new URLSearchParams(location.search).get('intent');
+  if (intent === 'demo') document.getElementById('interest').value = 'Book a demo call';
+  if (intent === 'quote') document.getElementById('interest').value = 'Workflow integrations';
+}
+if (location.hash === '#estimate') calculatorDisclosure.open = true;
+window.addEventListener('hashchange', () => {
+  if (location.hash === '#contact') inquiryDisclosure.open = true;
+  if (location.hash === '#estimate') calculatorDisclosure.open = true;
+});
+
+const startingPoints = {
+  discover: {advice:'Start with discovery: map the work, compare effort and value, and choose one useful workflow.', interest:'Find automation opportunities'},
+  build: {advice:'Start with a scoped build: check the tools, data, review points, and acceptance criteria before connecting anything.', interest:'Workflow integrations'},
+  improve: {advice:'Start with a workflow review: trace failures, compare the workload baseline, and agree the changes worth making.', interest:'Custom AI automation'}
+};
+const startPoint = document.getElementById('start-point');
+startPoint.addEventListener('change', () => { document.getElementById('start-advice').textContent = startingPoints[startPoint.value].advice; });
+document.getElementById('start-inquiry').addEventListener('click', () => {
+  document.getElementById('interest').value = startingPoints[startPoint.value].interest;
+  result.hidden = true;
+});
+
+const filmButton = document.getElementById('watch-film');
+const film = document.getElementById('workflow-film');
+const video = document.getElementById('demo-video');
+filmButton.addEventListener('click', () => {
+  const open = film.hidden;
+  film.hidden = !open; filmButton.setAttribute('aria-expanded', String(open));
+  if (!open) { video.pause(); return; }
+  const source = video.querySelector('source');
+  if (!source.hasAttribute('src')) { source.src = source.dataset.src; video.load(); }
+  video.play().catch(() => { document.getElementById('film-status').textContent = 'Use the video controls to play. Illustrative workflow; no live data.'; });
+});
+video.addEventListener('error', () => { document.getElementById('film-status').textContent = 'The video could not load. You can read the transcript below or run the interactive workflow demo.'; });
 
 if('IntersectionObserver' in window) {
   const motion=new IntersectionObserver(entries=>entries.forEach(entry=>entry.target.classList.toggle('motion-visible',entry.isIntersecting)),{rootMargin:'60px'});
