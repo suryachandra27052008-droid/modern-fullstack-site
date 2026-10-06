@@ -46,6 +46,12 @@ Mobile spacing and copy are shorter, the process uses a compact two-column layou
 
 To regenerate it, install Pillow in your local Python environment, ensure FFmpeg is on PATH, and run `python scripts/render-workflow-film.py`. The rendering script is excluded from Vercel deployment.
 
+## Logo
+
+The complete original logo supplied by the user appears in the header and footer of all three pages. `dist/branding/autixai-logo-original.jpg` is an unchanged copy, including the olive circle, white border, beige background, and original lettering. CSS uses `object-fit: contain` so the graphic is neither cropped nor stretched. An adjacent brand name keeps the compact phone header legible.
+
+The source image and unused generated wordmark drafts are retained in `branding`, excluded from deployment. The site uses the original image rather than those drafts.
+
 ## Workflow motion
 
 The hero and portfolio workflows use travelling signals and staggered node highlights. Expanded demos include an animated four-step route, progress highlights, and completion checkmarks. These remain local simulations. Meshes appear in the hero and contact section, and decorative motion pauses off screen. Reduced-motion preferences disable animations.
