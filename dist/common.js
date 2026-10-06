@@ -23,6 +23,8 @@
   if (year) year.textContent = String(new Date().getFullYear());
   const settings = window.AUTIXAI_CONFIG || {};
   const httpsUrl = value => { try { const url = new URL(value); return url.protocol === 'https:' ? url.href : ''; } catch { return ''; } };
+  const webhook = httpsUrl(settings.webhookUrl) || (['localhost','127.0.0.1'].includes(location.hostname) && /^http:\/\/(localhost|127\.0\.0\.1):[0-9]+\//.test(settings.webhookUrl || '') ? settings.webhookUrl : '');
+  window.AutixAIEndpoints = Object.freeze({webhook});
   const calendar = httpsUrl(settings.calendarUrl);
   if (calendar) document.querySelectorAll('[data-calendar-link]').forEach(link => { link.href = calendar; link.hidden = false; });
   const linkedin = httpsUrl(settings.linkedinUrl);
@@ -35,8 +37,29 @@
     const label = document.createElement('span'); label.textContent = 'RECENT BUILD';
     highlight.replaceChildren(label,document.createTextNode(`${settings.caseStudy.title} — ${settings.caseStudy.result}`));
   }
-  if (settings.webhookUrl) {
-    document.querySelectorAll('[data-inquiry-privacy]').forEach(text => { text.textContent = 'Submitting sends these details to AutixAI’s connected inquiry service to follow up on your request. You can also review and send the WhatsApp draft.'; });
-    document.querySelectorAll('[data-trust-inquiry-privacy]').forEach(text => { text.textContent = 'When you submit, the website sends your contact details and business notes to our connected inquiry service. We use them to follow up on your request. The page reports whether receipt was confirmed; you can also send the draft on WhatsApp or call. The website does not save form details in browser storage.'; });
+  document.querySelectorAll('[data-social-link]').forEach(link => { if (linkedin) { link.href = linkedin; link.hidden = false; } });
+  if (webhook) {
+    document.querySelectorAll('[data-inquiry-privacy]').forEach(text => { text.textContent = 'Preparing creates a draft only. After reviewing it, choose WhatsApp or the separate direct send button. Direct send shares these details with AutixAI’s connected enquiry service so we can respond.'; });
+    document.querySelectorAll('[data-trust-inquiry-privacy]').forEach(text => { text.textContent = 'Preparing a draft does not send it. If you choose the separate direct send button after review, the website sends your contact and process details to our connected enquiry service so we can respond. Receipt is confirmed only after a successful response. The website does not save form details in browser storage.'; });
   }
+})();
+
+// Optional, consent-aware integration point. Inactive by default; no identifiers or form values.
+(() => {
+  const allowed = new Set(['hero_cta','automation_audit_click','whatsapp_click','contact_form_start','audit_request_prepared','contact_form_complete','calculator_usage','service_card_click','pricing_enquiry']);
+  window.AutixAIEvents = Object.freeze({ track(name) {
+    const config = window.AUTIXAI_CONFIG || {};
+    if (!allowed.has(name) || !config.analyticsEnabled || typeof window.AUTIXAI_ANALYTICS_HANDLER !== 'function') return;
+    try { window.AUTIXAI_ANALYTICS_HANDLER(name); } catch { /* Analytics must never interrupt visitor actions. */ }
+  }});
+  document.addEventListener('click', event => {
+    const link = event.target.closest('a,button'); if (!link) return;
+    if (link.dataset.track) window.AutixAIEvents.track(link.dataset.track);
+    if (link.dataset.intent === 'audit') window.AutixAIEvents.track('automation_audit_click');
+    if (link.tagName === 'A' && link.href.startsWith('https://wa.me/')) {
+      window.AutixAIEvents.track('whatsapp_click');
+      if (link.id === 'send-inquiry') window.AutixAIEvents.track('contact_form_complete');
+    }
+  });
+  document.querySelectorAll('[data-service]').forEach(row => row.querySelector('summary').addEventListener('click', () => window.AutixAIEvents.track('service_card_click')));
 })();

@@ -1,0 +1,146 @@
+"""Refresh static content from content/site-content.json. No deployment dependencies."""
+from pathlib import Path
+from html import escape
+from urllib.parse import quote, urlsplit
+import json
+import re
+
+ROOT = Path(__file__).resolve().parents[1]
+DIST = ROOT / 'dist'
+DATA = json.loads((ROOT / 'content/site-content.json').read_text(encoding='utf-8'))
+VERSION = '20261007.7'
+BASE = 'https://autixai-site.vercel.app'
+C = DATA['contact']
+e = lambda value: escape(str(value), quote=True)
+WA = f"https://wa.me/{C['whatsapp']}"
+
+def block(html, key, value):
+    pattern = rf'<!-- content:{key}:start -->.*?<!-- content:{key}:end -->'
+    return re.sub(pattern, lambda _: f'<!-- content:{key}:start -->\n{value}\n<!-- content:{key}:end -->', html, flags=re.S)
+
+def brand():
+    return f'<a class="brand" href="/" aria-label="AutixAI home"><img class="brand-logo" src="/branding/autixai-logo-original.jpg" width="1600" height="1600" alt=""><span class="brand-name">{e(C["name"])}</span></a>'
+
+def navigation(page):
+    links=[]
+    for item in DATA['navigation']:
+        href=item['href']
+        if page == '': href=href.removeprefix('/') if href.startswith('/#') else href
+        current=' aria-current="page"' if item['href']==f'/{page}/' else ''
+        links.append(f'<a href="{e(href)}"{current}>{e(item["label"])}</a>')
+    return ''.join(links)
+
+def header(page):
+    audit='#contact' if not page else '/?intent=audit#contact'
+    # Short top navigation; the complete set appears in the mobile menu and footer.
+    top=[DATA['navigation'][i] for i in [0,1,3]]
+    nav=''.join(f'<a href="{e(item["href"].removeprefix("/") if not page and item["href"].startswith("/#") else item["href"])}"'+(' aria-current="page"' if item['href']==f'/{page}/' else '')+f'>{e(item["label"])}</a>' for item in top)
+    nav+='<a href="/trust/"'+(' aria-current="page"' if page=='trust' else '')+'>Trust</a>'
+    return f'''<header class="site-header"><div class="container nav-inner">{brand()}<nav class="desktop-nav" aria-label="Main navigation">{nav}</nav><a href="{audit}" class="button button-small header-cta" data-intent="audit"><span class="desktop-copy">Get a Free Automation Audit</span><span class="mobile-copy">Free audit</span></a><button class="menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="mobile-nav"><span></span><span></span></button></div><nav id="mobile-nav" class="mobile-nav" aria-label="Mobile navigation" hidden>{navigation(page)}<a href="/trust/">Trust & data</a><a href="{'/?intent=demo#contact' if page else '#contact'}" data-intent="demo">Book a demo call</a></nav></header>'''
+
+def footer(page):
+    social=''
+    for item in C.get('socials',[]):
+        if urlsplit(item.get('url','')).scheme=='https': social+=f'<a href="{e(item["url"])}" target="_blank" rel="noopener noreferrer">{e(item["label"])}</a>'
+    email=f'<a href="mailto:{e(C["email"])}">{e(C["email"])}</a>' if C.get('email') else ''
+    return f'''<footer class="site-footer"><div class="container footer-top"><div class="footer-identity">{brand()}<p>AI automation systems for modern businesses.</p></div><nav aria-label="Footer navigation">{navigation(page)}<a href="/trust/">Trust & data</a><a href="/privacy/">Privacy Policy</a><a href="/terms/">Terms</a></nav><div class="footer-contact"><a href="tel:{e(C['phone'])}">{e(C['displayPhone'])}</a><a href="{WA}" target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>{email}{social}<a data-social-link hidden target="_blank" rel="noopener noreferrer">LinkedIn ↗</a></div></div><div class="container footer-bottom"><span>© <span id="year">2026</span> AutixAI. All rights reserved.</span><span>Built around your business.</span></div></footer>'''
+
+def service_section():
+    rows=[]
+    for i,s in enumerate(DATA['services'],1):
+        rows.append(f'''<details class="service" open data-service="{e(s['title'])}"><summary><span class="service-number">{i:02}</span><h3>{e(s['title'])}</h3><span class="service-toggle" aria-hidden="true">+</span></summary><div class="service-description"><p>{e(s['description'])}</p><p class="service-workflow"><strong>Example workflow</strong>{e(s['workflow'])}</p><p class="service-benefit"><strong>Business benefit</strong>{e(s['benefit'])}</p></div></details>''')
+    choices=''.join(f'<button type="button" data-area="{e(a["id"])}" aria-pressed="{str(i==0).lower()}">{e(a["title"])}</button>' for i,a in enumerate(DATA['areas']))
+    options=''.join(f'<option value="{e(a["id"])}">{e(a["title"])}</option>' for a in DATA['areas'])
+    industries=''.join(f'<option value="{e(a["id"])}">{e(a["title"])}</option>' for a in DATA['industries'])
+    area=DATA['areas'][0];industry=DATA['industries'][0]
+    return f'''<section id="services" class="container section"><div class="section-heading"><div><div class="eyebrow accent-text">01 / WHAT WE DO</div><h2>A smarter way<br>to get work done.</h2></div><p>Practical systems for sales, support and operations. Remove repeat work so your people can focus on customers and decisions.</p></div><div class="services-grid">{''.join(rows)}</div>
+<div class="opportunity-explorer"><div class="compact-heading"><span class="eyebrow accent-text">FIND YOUR STARTING POINT</span><h3>What could your business automate?</h3><p>Choose a process to see the problem, a possible workflow and the business outcome.</p></div><div class="area-buttons" role="group" aria-label="Choose an automation area">{choices}</div><div class="area-select"><label for="automation-area">Choose a process</label><select id="automation-area">{options}</select></div><article class="opportunity-card glass" aria-labelledby="area-title"><h4 id="area-title">{e(area['title'])}</h4><dl><div><dt>Problem</dt><dd id="area-problem">{e(area['problem'])}</dd></div><div><dt>Automation</dt><dd id="area-automation">{e(area['automation'])}</dd></div><div><dt>Business outcome</dt><dd id="area-outcome">{e(area['outcome'])}</dd></div></dl><p id="area-status" class="sr-only" role="status"></p><a id="area-inquiry" class="text-link" href="#contact" data-intent="audit">Get My Free Automation Audit →</a></article></div>
+<div class="industry-explorer"><div><h3>Built around your business.</h3><p>Choose your industry for a few practical ideas.</p><label for="industry-choice">Your industry</label><select id="industry-choice">{industries}</select></div><div class="industry-ideas"><h4 id="industry-title">Ideas for {e(industry['title'])}</h4><ul id="industry-ideas">{''.join(f'<li>{e(idea)}</li>' for idea in industry['ideas'])}</ul><a id="industry-inquiry" class="text-link" href="#contact" data-intent="audit">Discuss these ideas →</a><p id="industry-status" class="sr-only" role="status"></p></div></div><noscript><p class="input-hint">Interactive choices need JavaScript. The examples above and all service descriptions remain available.</p></noscript></section>'''
+
+def cases():
+    cards=[]
+    for s in DATA['caseStudies']:
+        verified=s.get('kind')=='verified'
+        label='Client Case Study' if verified else 'Example Automation'
+        rows=[('Industry',s['industry']),('Problem',s['problem']),('Before',s['before']),('Automation built' if verified else 'Possible automation',s['automation']),('After' if verified else 'Potential outcome',s['after']),('Business impact' if verified else 'Potential business impact',s['impact']),('Tools integrated' if verified else 'Example tools',' · '.join(s['tools']))]
+        if verified and s.get('company'): rows.insert(0,('Company',s['company']))
+        if verified and s.get('hoursSaved') is not None: rows.append(('Verified time returned',s['hoursSaved']))
+        cards.append(f'<details class="case-card"><summary><span class="eyebrow accent-text">{label}</span><h4>{e(s["title"])}</h4><p>{e(s["problem"])}</p><span class="case-open">View the workflow <span aria-hidden="true">+</span></span></summary><dl>{"".join(f"<div><dt>{e(k)}</dt><dd>{e(v)}</dd></div>" for k,v in rows)}</dl><a class="text-link" href="#contact" data-intent="audit">Discuss a similar workflow →</a></details>')
+    note='Real client case studies coming soon.' if not any(s.get('kind')=='verified' for s in DATA['caseStudies']) else 'Client outcomes relate to the stated project and are not a guarantee for other businesses.'
+    intro='Cards marked Client Case Study describe delivered work. Example Automation cards are illustrative.' if any(s.get('kind')=='verified' for s in DATA['caseStudies']) else 'Explore what a connected process could look like. These examples are not claimed client results.'
+    return f'<section id="case-studies" class="case-section" aria-labelledby="cases-heading"><div class="compact-heading"><span class="eyebrow accent-text">PRACTICAL EXAMPLES</span><h3 id="cases-heading">Automation in the real world.</h3><p>{intro}</p></div><div class="case-grid">{"".join(cards)}</div><p class="input-hint">{note}</p></section>'
+
+ICON_PATHS={'chat':'M4 4h16v12H9l-5 4Z','table':'M4 4h16v16H4ZM4 10h16M10 4v16','mail':'M3 5h18v14H3ZM3 5l9 7 9-7','document':'M6 3h8l4 4v14H6ZM9 11h6M9 15h6','connect':'M5 6h5v5H5ZM14 13h5v5h-5ZM10 8h6v5M7 11v5h7','shop':'M4 9h16v12H4ZM8 9V7a4 4 0 0 1 8 0v2','payment':'M3 5h18v14H3ZM3 10h18M6 15h4','spark':'m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z'}
+def integrations():
+    items=[]
+    for tool in DATA['integrations']:
+        items.append(f'<span class="integration-tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{ICON_PATHS[tool["type"]]}"/></svg>{e(tool["name"])}</span>')
+    return f'<div class="integration-strip"><h3>Works with the tools you already use.</h3><div>{"".join(items)}</div><p>And if your tool has an API, we can usually connect it.</p><small>Illustrative tool categories; availability depends on your APIs, plans and permissions. No official partnership is implied.</small></div>'
+
+def pricing():
+    cards=[]
+    for p in DATA['pricing']:
+        cards.append(f'<article class="scope-card"><h3>{e(p["title"])}</h3><p>{e(p["bestFor"])}</p><ul class="plain-list">{"".join(f"<li>{e(item)}</li>" for item in p["examples"])}</ul><a class="button button-outline" href="/?intent=quote#contact" data-track="pricing_enquiry">Discuss Your Workflow</a></article>')
+    return f'<section class="info-section" aria-labelledby="pricing-heading"><h2 id="pricing-heading">Pricing depends on what you want to automate.</h2><div class="scope-grid">{"".join(cards)}</div><p class="info-note">After understanding your workflow, we provide a clear implementation scope and quote before development begins.</p></section>'
+
+def confidence():
+    return '''<section class="confidence-section container" aria-labelledby="why-heading"><div class="compact-heading"><span class="eyebrow accent-text">WHY AUTIXAI?</span><h2 id="why-heading">Automation should simplify your business — not make it harder to run.</h2></div><div class="confidence-grid"><div><ul class="principles"><li>Built around your current workflow and tools</li><li>Human approval wherever needed</li><li>Understandable systems your team can use</li><li>AI only where it helps the process</li><li>Measure the improvement, then expand</li></ul><a class="text-link" href="/pricing/">Explore project scopes and pricing →</a></div><details class="security-note"><summary><h3>Your systems. Your data. Your control.</h3><span>See the principles behind a build <span aria-hidden="true">+</span></span></summary><ul class="principles"><li>Access only to systems required by the workflow</li><li>Secure API connections where supported</li><li>Sensitive credentials kept out of frontend code</li><li>Human review for critical actions</li><li>Logging and monitoring scoped to your needs</li><li>Designed around your existing infrastructure</li></ul><a class="text-link" href="/trust/">Read our data and handover approach →</a></details></div></section>'''
+
+def faq():
+    items=[f'<details><summary>{e(f["question"])}</summary><p>{e(f["answer"])}</p></details>' for f in DATA['faq']]
+    return f'<section id="faq" class="faq-section container"><div><div class="eyebrow accent-text">A FEW GOOD QUESTIONS</div><h2>Let’s clear<br>things up.</h2></div><div class="faq-list">{"".join(items[:6])}<details class="more-faq"><summary>More about control, timing and cost</summary><div class="faq-more-list">{"".join(items[6:])}</div></details></div></section>'
+
+TITLES={
+    '':('AutixAI — AI Automation for Businesses','AutixAI builds AI-powered automation systems for businesses. Automate leads, customer support, operations, reporting, WhatsApp workflows and repetitive tasks.'),
+    'pricing':('Pricing & Project Scope | AutixAI','Explore one-workflow automation, connected business systems and custom AI projects. Get a clear scope and quote before development.'),
+    'trust':('Trust, Data & Human Control | AutixAI','How AutixAI approaches system access, AI review, workflow testing, ownership and handover. Define the controls in your project scope.'),
+    'privacy':('Privacy Policy | AutixAI','How AutixAI handles website enquiries, WhatsApp drafts, hosting information and privacy requests.'),
+    'terms':('Website Terms | AutixAI','Terms for using the AutixAI website, free audit enquiries, illustrative workflow demos and automation estimates.')}
+
+for slug,(title,description) in TITLES.items():
+    path=DIST/slug/'index.html'
+    html=path.read_text(encoding='utf-8')
+    html=re.sub(r'<header class="site-header">.*?</header>',lambda _:header(slug),html,flags=re.S)
+    html=re.sub(r'<footer class="site-footer">.*?</footer>',lambda _:footer(slug),html,flags=re.S)
+    html=re.sub(r'<title>.*?</title>',f'<title>{e(title)}</title>',html)
+    html=re.sub(r'<link rel="icon"[^>]*>', '',html)
+    html=html.replace('</head>','<link rel="icon" href="/branding/autixai-logo-original.jpg" type="image/jpeg">\n</head>')
+    for key,value in [('description',description),('og:title',title),('og:description',description),('twitter:title',title),('twitter:description',description),('og:url',BASE+('/'+slug+'/' if slug else '/'))]:
+        html=re.sub(rf'(<meta (?:name|property)="{key}" content=")[^"]*(")',lambda m:m[1]+e(value)+m[2],html)
+    canonical=BASE+('/'+slug+'/' if slug else '/')
+    html=re.sub(r'<link rel="canonical" href="[^"]+">',f'<link rel="canonical" href="{canonical}">',html)
+    html=re.sub(r'\?v=20261007\.\d+',f'?v={VERSION}',html)
+    if 'site-config.js' not in html: html=html.replace('<script src="/common.js',f'<script src="/site-config.js?v={VERSION}" defer></script><script src="/common.js',1)
+    if slug: html=re.sub(r'<script src="/content-data.js[^\"]*" defer></script>', '',html)
+    org={'@context':'https://schema.org','@type':'Organization','name':C['name'],'url':BASE+'/','logo':BASE+'/branding/autixai-logo-original.jpg','description':'AI automation systems for modern businesses.','contactPoint':{'@type':'ContactPoint','telephone':C['phone'],'contactType':'sales','availableLanguage':'English'}}
+    if not slug:
+        html=html.replace('class="text-link" href="#contact">Get My Free Automation Audit','class="text-link" href="#contact" data-intent="audit">Get My Free Automation Audit')
+        html=block(html,'services',service_section())
+        html=block(html,'cases',cases())
+        html=block(html,'integrations',integrations())
+        html=block(html,'confidence',confidence())
+        html=block(html,'faq',faq())
+        options='<option value="">Choose your industry</option>'+''.join(f'<option>{e(i["title"])}</option>' for i in DATA['industries'])+'<option>Other / mixed business</option>'
+        html=block(html,'industry-options',options)
+        faq_schema={'@type':'FAQPage','mainEntity':[{'@type':'Question','name':f['question'],'acceptedAnswer':{'@type':'Answer','text':f['answer']}} for f in DATA['faq']]}
+        schema={'@context':'https://schema.org','@graph':[{k:v for k,v in org.items() if k!='@context'},faq_schema]}
+    else: schema=org
+    if slug=='pricing': html=block(html,'pricing',pricing())
+    html=re.sub(r'[ \t]*<script type="application/ld\+json">.*?</script>\n?', '',html,flags=re.S)
+    html=html.replace('</head>','<script type="application/ld+json">'+json.dumps(schema,ensure_ascii=False).replace('<','\\u003c')+'</script>\n</head>')
+    html=html.replace('<span class="brand-name">Autixai</span>','<span class="brand-name">AutixAI</span>')
+    html=re.sub(r'href="tel:[^"]*"',f'href="tel:{C["phone"]}"',html)
+    html=re.sub(r'https://wa.me/\d+', WA, html)
+    def phone_text(match):
+        text=re.sub(r'\+\d[\d ]{8,}',C['displayPhone'],match[2])
+        return match[1]+text+match[3]
+    html=re.sub(r'(<a\b[^>]*href="tel:[^"]+"[^>]*>)([^<]*)(</a>)',phone_text,html)
+    html='\n'.join(line.rstrip() for line in html.splitlines())+'\n'
+    html=re.sub(r'\n(?:[ \t]*\n)+','\n',html)
+    path.write_text(html,encoding='utf-8')
+
+runtime={key:DATA[key] for key in ['contact','areas','industries']}
+(DIST/'content-data.js').write_text("'use strict';\n// Generated by scripts/update-content.py. Edit content/site-content.json.\nwindow.AUTIXAI_CONTENT = "+json.dumps(runtime,ensure_ascii=False).replace('<','\\u003c')+';\n',encoding='utf-8')
+(DIST/'robots.txt').write_text(f'User-agent: *\nAllow: /\nSitemap: {BASE}/sitemap.xml\n',encoding='utf-8')
+(DIST/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join(f'<url><loc>{BASE+"/"+slug+"/" if slug else BASE+"/"}</loc></url>' for slug in TITLES)+'</urlset>\n',encoding='utf-8')
+print('Updated five pages, shared components, structured data and discovery files.')

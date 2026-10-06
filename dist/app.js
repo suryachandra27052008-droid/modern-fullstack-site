@@ -1,8 +1,10 @@
 'use strict';
 const calculatorInputs = ['tasks', 'minutes', 'days'].map(id => document.getElementById(id));
 const costInputs = ['hourly-cost', 'coverage', 'setup-cost', 'running-cost'].map(id => document.getElementById(id));
-const siteConfig = window.AUTIXAI_CONFIG || {};
-const WEBHOOK_URL = siteConfig.webhookUrl || '';
+const WEBHOOK_URL = window.AutixAIEndpoints?.webhook || '';
+const businessContact = window.AUTIXAI_CONTENT.contact;
+const teamInputs = ['employees','weekly-hours'].map(id => document.getElementById(id));
+let estimateMode = 'team';
 const currencies = {INR:{locale:'en-IN',symbol:'₹',hourly:250},USD:{locale:'en-US',symbol:'$',hourly:25}};
 let selectedCurrency = 'INR';
 let estimate = null;
@@ -12,15 +14,17 @@ function formatMoney(value) {
 }
 function updateEstimate() {
   const [tasks, minutes, days] = calculatorInputs.map(input => Number(input.value));
-  const valid = [...calculatorInputs, ...costInputs].every(input => input.validity.valid);
+  const workloadInputs = estimateMode === 'team' ? teamInputs : calculatorInputs;
+  const valid = [...workloadInputs, ...costInputs].every(input => input.validity.valid);
   document.getElementById('estimate-error').hidden = valid;
   document.getElementById('estimate-results').hidden = !valid;
   document.getElementById('estimate-inquiry').disabled = !valid;
-  costInputs.forEach(input => input.setAttribute('aria-invalid', String(!input.validity.valid)));
+  [...calculatorInputs,...teamInputs,...costInputs].forEach(input => input.setAttribute('aria-invalid', String(workloadInputs.concat(costInputs).includes(input) && !input.validity.valid)));
   if (!valid) { estimate = null; return; }
   const [hourlyCost, coverage, setupCost, runningCost] = costInputs.map(input => Number(input.value));
-  const weeklyHours = tasks * minutes * days / 60;
-  const monthlyHours = weeklyHours * 4.33;
+  const [employees, hoursPerEmployee] = teamInputs.map(input => Number(input.value));
+  const weeklyHours = estimateMode === 'team' ? employees * hoursPerEmployee : tasks * minutes * days / 60;
+  const monthlyHours = weeklyHours * 52 / 12;
   const capacity = monthlyHours * coverage / 100;
   const capacityValue = capacity * hourlyCost;
   const hasCosts = costInputs[2].value !== '' && costInputs[3].value !== '';
@@ -32,14 +36,25 @@ function updateEstimate() {
   document.getElementById('hours-result').replaceChildren(document.createTextNode(weeklyHours.toFixed(1)));
   const units = document.createElement('span'); units.textContent = ' hours / week';
   document.getElementById('hours-result').appendChild(units);
-  estimate = {tasks,minutes,days,weeklyHours,capacity,currency:selectedCurrency};
+  estimate = {mode:estimateMode,employees,hoursPerEmployee,tasks,minutes,days,weeklyHours,capacity,currency:selectedCurrency};
+  document.getElementById('monthly-hours-result').textContent = `${monthlyHours.toFixed(1)} hours`;
+  document.getElementById('yearly-hours-result').textContent = `${(weeklyHours * 52 * coverage / 100).toFixed(1)} hours`;
+  document.getElementById('yearly-value-result').textContent = formatMoney(weeklyHours * 52 * coverage / 100 * hourlyCost);
   document.getElementById('manual-cost-result').textContent = formatMoney(monthlyHours * hourlyCost);
   document.getElementById('capacity-result').textContent = `${capacity.toFixed(1)} hours`;
   document.getElementById('capacity-value-result').textContent = formatMoney(capacityValue);
   document.getElementById('net-value-result').textContent = hasCosts ? formatMoney(netValue) : 'Add both cost estimates';
   document.getElementById('payback-result').textContent = !hasCosts ? 'Add both cost estimates' : setupCost === 0 ? 'No setup cost' : netValue <= 0 ? 'Not recovered at these inputs' : `${(setupCost / netValue).toFixed(1)} months`;
 }
-[...calculatorInputs, ...costInputs].forEach(input => input.addEventListener('input', updateEstimate));
+[...calculatorInputs, ...teamInputs, ...costInputs].forEach(input => input.addEventListener('input', () => { updateEstimate(); window.AutixAIEvents.track('calculator_usage'); }));
+function setEstimateMode(mode) {
+  estimateMode = mode;
+  document.getElementById('team-inputs').hidden = mode !== 'team';
+  document.getElementById('task-inputs').hidden = mode !== 'task';
+  document.querySelectorAll('[data-estimate-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.estimateMode === mode)));
+  updateEstimate();
+}
+document.querySelectorAll('[data-estimate-mode]').forEach(button => button.addEventListener('click', () => { setEstimateMode(button.dataset.estimateMode); window.AutixAIEvents.track('calculator_usage'); }));
 updateEstimate();
 document.querySelectorAll('[data-currency]').forEach(button => button.addEventListener('click', () => {
   const next = button.dataset.currency;
@@ -53,7 +68,7 @@ document.querySelectorAll('[data-currency]').forEach(button => button.addEventLi
 }));
 
 const workflows = {
-  leads: { title: 'From new inquiry to qualified opportunity.', description: 'Connect your lead sources to your sales process. Repeat follow-ups can run automatically, with opt-out rules and a clear handover to your team.', interest: 'Sales and lead automation', steps: [ ['Capture the inquiry', 'Receive a lead from a website form, WhatsApp, or email.'], ['Qualify with AI', 'Collect useful details and identify the prospect’s needs.'], ['Update your CRM', 'Create or update the record and assign the right owner.'], ['Follow up thoughtfully', 'Send an appropriate next step and notify your sales team.'] ] },
+  leads: { title: 'From new inquiry to qualified opportunity.', description: 'Connect your lead sources to your sales process. Repeat follow-ups can run automatically, with opt-out rules and a clear handover to your team.', interest: 'Sales and lead automation', steps: [ ['Lead arrives', 'Capture a website form, WhatsApp message or email inquiry.'], ['AI understands the request', 'Organise the needs using the details the prospect provided.'], ['Lead qualified', 'Check the agreed criteria; uncertain cases go to a person.'], ['CRM updated', 'Validate and create or update the structured lead record.'], ['Salesperson assigned', 'Route to the owner using your territory or service rules.'], ['Follow-up prepared', 'Queue an approved response, respecting consent and opt-out rules.'], ['Team notified', 'Share the lead context and next task with your team.'] ] },
   support: { title: 'A faster answer. A thoughtful handover.', description: 'An assistant uses your approved business knowledge to respond to routine questions. When a request needs judgement or the answer is unclear, it hands over with the conversation context.', interest: 'AI customer support', steps: [ ['Receive the question', 'Capture a customer request through your connected channel.'], ['Find relevant knowledge', 'Look up information in your approved business resources.'], ['Answer or escalate', 'Respond to supported questions; route exceptions to a person.'], ['Keep the context', 'Log the conversation so the team can pick up smoothly.'] ] },
   operations: { title: 'Turn paperwork into a connected process.', description: 'Extract details from incoming documents, flag missing information, and send records for review. After approval, update the connected system and notify the people who need to know.', interest: 'Reporting and operations', steps: [ ['Receive a document', 'An attachment or connected upload triggers the workflow.'], ['Extract and check', 'Read relevant fields and flag missing or inconsistent details.'], ['Request human approval', 'A team member reviews the details before committing changes.'], ['Update and notify', 'Write the approved record and send the next task or alert.'] ] }
 };
@@ -69,12 +84,18 @@ const status = document.getElementById('demo-status');
 const demoVisual = document.createElement('div');
 demoVisual.className = 'demo-visual';
 demoVisual.setAttribute('aria-hidden', 'true');
-demoVisual.innerHTML = `<svg viewBox="0 0 800 100" xmlns="http://www.w3.org/2000/svg"><path class="demo-route" d="M60 50H740"/><path class="demo-route-active" d="M60 50H740" pathLength="100"/>${[60,286.67,513.33,740].map((x,i)=>`<g class="demo-node"><circle class="node-halo" cx="${x}" cy="50" r="30"/><circle cx="${x}" cy="50" r="23"/><text x="${x}" y="51">0${i+1}</text></g>`).join('')}<circle class="demo-packet" cx="60" cy="50" r="5"/></svg><div class="demo-labels"><span></span><span></span><span></span><span></span></div>`;
 document.getElementById('detail-description').after(demoVisual);
-const demoNodes = [...demoVisual.querySelectorAll('.demo-node')];
-const demoRoute = demoVisual.querySelector('.demo-route-active');
-const demoPacket = demoVisual.querySelector('.demo-packet');
-const demoLabels = {leads:['Capture','Qualify','CRM sync','Follow-up'],support:['Question','Knowledge','Answer','Handover'],operations:['Document','Extract','Review','Update']};
+let demoNodes = [], demoRoute, demoPacket;
+const demoLabels = {leads:['Lead','Understand','Qualify','CRM','Assign','Follow-up','Notify'],support:['Question','Knowledge','Answer','Handover'],operations:['Document','Extract','Review','Update']};
+function renderDemoVisual(key) {
+  const labels = demoLabels[key];
+  const positions = labels.map((_,i) => 60+i/(labels.length-1)*680);
+  demoVisual.innerHTML = `<svg viewBox="0 0 800 100" xmlns="http://www.w3.org/2000/svg"><path class="demo-route" d="M60 50H740"/><path class="demo-route-active" d="M60 50H740" pathLength="100"/>${positions.map((x,i)=>`<g class="demo-node"><circle class="node-halo" cx="${x}" cy="50" r="30"/><circle cx="${x}" cy="50" r="23"/><text x="${x}" y="51">0${i+1}</text></g>`).join('')}<circle class="demo-packet" cx="60" cy="50" r="5"/></svg><div class="demo-labels" style="grid-template-columns:repeat(${labels.length},1fr)">${labels.map(label=>`<span>${label}</span>`).join('')}</div>`;
+  demoNodes = [...demoVisual.querySelectorAll('.demo-node')];
+  demoRoute = demoVisual.querySelector('.demo-route-active');
+  demoPacket = demoVisual.querySelector('.demo-packet');
+}
+renderDemoVisual('leads');
 let activeWorkflow = null;
 let demoTimer = null;
 function resetDemo() {
@@ -94,7 +115,7 @@ function openWorkflow(key) {
     const group = document.createElement('div'); const dt = document.createElement('dt'); const dd = document.createElement('dd');
     dt.textContent = label; dd.textContent = value; group.append(dt, dd); facts.append(group);
   });
-  demoVisual.querySelectorAll('.demo-labels span').forEach((label,i)=>{label.textContent=demoLabels[key][i];});
+  renderDemoVisual(key);
   const list = document.getElementById('detail-steps'); list.replaceChildren();
   data.steps.forEach(([title, description], index) => { const li = document.createElement('li'); const number = document.createElement('span'); number.textContent = `0${index + 1}`; const strong = document.createElement('strong'); strong.textContent = title; const p = document.createElement('p'); p.textContent = description; li.append(number, strong, p); list.append(li); });
   workflowButtons.forEach(button => { const selected = button.dataset.workflowButton === key; button.setAttribute('aria-expanded', String(selected)); button.closest('.portfolio-card').classList.toggle('active', selected); button.querySelector('span').textContent = selected ? '−' : '+'; });
@@ -122,8 +143,8 @@ runButton.addEventListener('click', () => {
     if (index === steps.length) {
       demoVisual.classList.replace('is-running','is-complete');status.textContent = 'Demo complete. This simulation did not send messages or change any business data.';runButton.disabled=false;runButton.textContent='Run again';return;
     }
-    steps[index].classList.add('current');demoNodes[index].classList.add('current');demoRoute.style.strokeDashoffset=String(100-index/3*100);demoPacket.style.cx=`${60+index/3*680}px`;
-    status.textContent=`Demo step ${index+1} of 4: ${workflows[activeWorkflow].steps[index][0]}`;
+    steps[index].classList.add('current');demoNodes[index].classList.add('current');demoRoute.style.strokeDashoffset=String(100-index/(steps.length-1)*100);demoPacket.style.cx=`${60+index/(steps.length-1)*680}px`;
+    status.textContent=`Demo step ${index+1} of ${steps.length}: ${workflows[activeWorkflow].steps[index][0]}`;
     index++;demoTimer=setTimeout(next,matchMedia('(prefers-reduced-motion: reduce)').matches?350:1200);
   };
   next();
@@ -202,34 +223,44 @@ function captureLead(values) {
   currentCapture = signature;
   if (pendingCaptures.has(signature)) return;
   pendingCaptures.add(signature);
+  directSend.disabled = true;
   captureStatus.textContent = 'Sending your inquiry. You can also continue on WhatsApp or call us.';
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   fetch(WEBHOOK_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...values,source:'AutixAI website',submittedAt:new Date().toISOString()}),signal:controller.signal,keepalive:true})
-    .then(response => { if (!response.ok) throw new Error('Lead endpoint rejected the request'); if(currentCapture === signature)captureStatus.textContent = 'Your inquiry was received. Continue on WhatsApp if you’d like to chat.'; })
+    .then(response => { if (!response.ok) throw new Error('Lead endpoint rejected the request'); if(currentCapture === signature) { captureStatus.textContent = 'Your inquiry was received. Continue on WhatsApp if you’d like to chat.'; window.AutixAIEvents.track('contact_form_complete'); } })
     .catch(() => { if(currentCapture === signature)captureStatus.textContent = 'We couldn’t confirm receipt. Please send the WhatsApp draft or call us so we receive your inquiry.'; })
-    .finally(() => { clearTimeout(timeout); pendingCaptures.delete(signature); });
+    .finally(() => { clearTimeout(timeout); pendingCaptures.delete(signature); directSend.disabled = pendingCaptures.size > 0; });
 }
+let preparedValues = null;
+const directSend = document.getElementById('send-direct');
+directSend.hidden = !WEBHOOK_URL;
+directSend.addEventListener('click', () => { if (preparedValues) captureLead(preparedValues); });
 function prepareInquiry() {
+  currentCapture = '';
   const values = Object.fromEntries(new FormData(form));
   Object.keys(values).forEach(key => { values[key] = values[key].trim(); });
-  const message = ['Hi AutixAI! I’d like to discuss automation for my business.', '', `Name: ${values.name.trim()}`, `Business: ${values.business.trim()}`, `Phone: ${values.phone.trim()}`, ...(values.email.trim() ? [`Email: ${values.email.trim()}`] : []), `Interested in: ${values.interest}`, '', `About my business / what I’d like to automate:`, values.challenge.trim()].join('\n');
+  const message = [`Hi ${businessContact.name},`, values.interest === 'Free automation audit' ? 'I would like a free automation audit.' : `I would like to discuss: ${values.interest.toLowerCase()}.`, '', `Name: ${values.name}`, `Business: ${values.business}`, `Industry: ${values.industry}`, `Phone / WhatsApp: ${values.phone}`, ...(values.email ? [`Email: ${values.email}`] : []), '', 'Process I want to automate:', values.challenge, '', `Current tools: ${values.tools || 'To discuss'}`, `Approximate time spent: ${values.timeSpent || 'To discuss'}`, `Team size: ${values.teamSize || 'To discuss'}`].join('\n');
+  preparedValues = values;
+  window.AutixAIEvents.track('audit_request_prepared');
   document.getElementById('inquiry-preview').textContent = message;
-  document.getElementById('send-inquiry').href = `https://wa.me/919617310042?text=${encodeURIComponent(message)}`;
+  document.getElementById('send-inquiry').href = `https://wa.me/${businessContact.whatsapp}?text=${encodeURIComponent(message)}`;
   result.hidden = false;
-  captureLead(values);
+  document.getElementById('capture-status').textContent = WEBHOOK_URL ? 'Nothing has been sent yet. Open WhatsApp or choose the direct send button below after reviewing this message.' : 'Nothing has been sent yet. Open WhatsApp to review and send, or call us.';
   result.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' });
 }
 form.addEventListener('submit', event => {
   event.preventDefault();
   const invalid = formFields.filter(input => !validateField(input));
   document.getElementById('form-error').hidden = invalid.length === 0;
-  if (invalid.length) { invalid[0].focus(); return; }
+  if (invalid.length) { const disclosure = invalid[0].closest('.process-context'); if (disclosure) disclosure.open = true; invalid[0].focus(); return; }
   prepareInquiry();
 });
-form.addEventListener('input', event => { result.hidden = true; if (formFields.includes(event.target)) validateField(event.target); });
+form.addEventListener('input', event => { result.hidden = true; preparedValues = null; currentCapture = ''; if (formFields.includes(event.target)) validateField(event.target); });
 form.querySelector('[type="submit"]').disabled = false;
-document.querySelectorAll('[data-intent="demo"]').forEach(link => link.addEventListener('click', () => { document.getElementById('interest').value = 'Book a demo call'; result.hidden = true; }));
+document.querySelectorAll('[data-intent]').forEach(link => link.addEventListener('click', () => { document.getElementById('interest').value = link.dataset.intent === 'demo' ? 'Book a demo call' : 'Free automation audit'; result.hidden = true; }));
+let formStarted = false;
+form.addEventListener('focusin', () => { if (!formStarted) { formStarted = true; window.AutixAIEvents.track('contact_form_start'); } });
 document.querySelectorAll('.hero-visual,.contact-section').forEach(region=>{
   const mesh=document.createElement('div');mesh.className='mesh-art';mesh.setAttribute('aria-hidden','true');region.prepend(mesh);
 });
@@ -301,7 +332,8 @@ document.getElementById('estimate-inquiry').addEventListener('click', () => {
   updateEstimate();
   if (!estimate) return;
   const challenge = document.getElementById('challenge');
-  const summary = `Automation estimate: ${estimate.tasks} tasks/day × ${estimate.minutes} minutes × ${estimate.days} days/week; ${estimate.weeklyHours.toFixed(1)} manual hours/week; ${estimate.capacity.toFixed(1)} hours/month potentially returned. Currency: ${estimate.currency}. Planning assumptions, not guaranteed savings.`;
+  const basis = estimate.mode === 'team' ? `${estimate.employees} people × ${estimate.hoursPerEmployee} repetitive hours/person/week` : `${estimate.tasks} tasks/day × ${estimate.minutes} minutes × ${estimate.days} days/week`;
+  const summary = `Automation estimate: ${basis}; ${estimate.weeklyHours.toFixed(1)} manual hours/week; ${estimate.capacity.toFixed(1)} hours/month potentially returned. Currency: ${estimate.currency}. Planning assumptions, not guaranteed savings.`;
   const existing = challenge.value.replace(lastCalculationSummary,'').trim();
   if (existing.length + summary.length + 2 > challenge.maxLength) {
     document.getElementById('calculation-transfer-status').textContent = 'Please shorten your business notes so we can add the calculation.';
@@ -319,6 +351,7 @@ document.getElementById('estimate-inquiry').addEventListener('click', () => {
 if (location.hash === '#contact') {
   inquiryDisclosure.open = true;
   const intent = new URLSearchParams(location.search).get('intent');
+  if (intent === 'audit') document.getElementById('interest').value = 'Free automation audit';
   if (intent === 'demo') document.getElementById('interest').value = 'Book a demo call';
   if (intent === 'quote') document.getElementById('interest').value = 'Workflow integrations';
 }
@@ -375,7 +408,7 @@ if (document.modelContext?.registerTool) {
         if (!input || typeof input !== 'object' || Object.keys(input).some(key => !['tasksPerDay','minutesPerTask','workingDays'].includes(key))) throw new Error('Provide only tasksPerDay, minutesPerTask and workingDays.');
         const values = [input.tasksPerDay, input.minutesPerTask, input.workingDays];
         if (values.some((value,index) => !Number.isInteger(value) || value < 1 || value > [100,30,7][index])) throw new Error('Values must be whole numbers within the calculator ranges.');
-        calculatorDisclosure.open = true;
+        calculatorDisclosure.open = true; setEstimateMode('task');
         values.forEach((value,index) => { calculatorInputs[index].value = String(value); }); updateEstimate();
         return {manualHoursPerWeek:Number((values[0]*values[1]*values[2]/60).toFixed(1)),note:'Current manual effort only; actual savings vary.'};
       }
@@ -383,3 +416,31 @@ if (document.modelContext?.registerTool) {
     window.addEventListener('pagehide', () => lifecycle.abort(), {once:true});
   } catch { /* All visible controls continue working in unsupported browsers. */ }
 }
+
+// Compact content explorers reuse static, search-readable examples.
+const content = window.AUTIXAI_CONTENT;
+let chosenArea = content.areas[0];
+function chooseArea(id) {
+  chosenArea = content.areas.find(area => area.id === id) || content.areas[0];
+  document.getElementById('automation-area').value = chosenArea.id;
+  document.querySelectorAll('[data-area]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.area === chosenArea.id)));
+  document.getElementById('area-title').textContent = chosenArea.title;
+  ['problem','automation','outcome'].forEach(key => { document.getElementById(`area-${key}`).textContent = chosenArea[key]; });
+  document.getElementById('area-status').textContent = `Showing ${chosenArea.title}: ${chosenArea.outcome}`;
+  window.AutixAIEvents.track('service_card_click');
+}
+document.querySelectorAll('[data-area]').forEach(button => button.addEventListener('click', () => chooseArea(button.dataset.area)));
+document.getElementById('automation-area').addEventListener('change', event => chooseArea(event.target.value));
+document.getElementById('area-inquiry').addEventListener('click', () => {
+  const field = document.getElementById('challenge');
+  if (!field.value.trim()) field.value = `I would like to explore ${chosenArea.title.toLowerCase()} for my business.`;
+});
+let chosenIndustry = content.industries[0];
+document.getElementById('industry-choice').addEventListener('change', event => {
+  chosenIndustry = content.industries.find(industry => industry.id === event.target.value) || content.industries[0];
+  document.getElementById('industry-title').textContent = `Ideas for ${chosenIndustry.title}`;
+  const list = document.getElementById('industry-ideas'); list.replaceChildren();
+  chosenIndustry.ideas.forEach(idea => { const li = document.createElement('li'); li.textContent = idea; list.append(li); });
+  document.getElementById('industry-status').textContent = `Showing four ideas for ${chosenIndustry.title}.`;
+});
+document.getElementById('industry-inquiry').addEventListener('click', () => { document.getElementById('industry').value = chosenIndustry.title; });

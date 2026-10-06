@@ -1,76 +1,46 @@
 # AutixAI
 
-Responsive marketing website for AutixAI, an AI automation and workflow integration business. Brand palette: olive green `#566132`, beige `#EDE6D6`, dark brown outlines `#3B2C21`.
+Existing static AutixAI website, hosted at https://autixai-site.vercel.app/. Olive, warm beige and light brown surfaces; dark brown outlines; Cinzel headings and self-hosted DM Sans body text. The supplied original logo is used unchanged in the header, footer and favicon.
 
-## Local preview
+## Edit and preview
 
-Run `python -m http.server 4175 --bind 127.0.0.1 --directory dist` in this folder and visit http://127.0.0.1:4175/.
+Edit `content/site-content.json` for services, 16 automation areas, 12 industries, FAQ, pricing scopes, integrations, case studies, navigation and contact information. Run `python scripts/update-content.py` to refresh the marked static sections in `dist`, shared header/footer, runtime selector data, metadata, FAQ/Organization schemas, robots.txt and sitemap.xml. Generated sections remain useful to search engines and visitors without JavaScript. The script is a local content-authoring tool; Vercel serves the already-generated `dist` directory without a build or dependency install.
 
-## Visitor flows
+Run `python -m http.server 4175 --bind 127.0.0.1 --directory dist`, then visit http://127.0.0.1:4175/. Static assets use a version query; update `VERSION` in the content script when changing scripts, settings or styles, and regenerate before publishing.
 
-- Services and process navigation.
-- Three illustrative workflow demos, with simulated progress and no external side effects.
-- Manual-effort and capacity-value calculator: tasks per day × minutes per task × days per week ÷ 60. Monthly estimates use 4.33 weeks, an adjustable hourly staff cost, and estimated workload removal. Optional visitor-provided setup and recurring costs model net capacity value and illustrative payback. These are planning assumptions, not a quote or guaranteed cash savings.
-- Demo requests and business inquiries prepare a WhatsApp message for +91 9617310042. Visitors review the draft and send it themselves in WhatsApp. An optional public webhook captures leads on submission. Its confirmed success or failure is shown; WhatsApp and direct calling remain available. An optional calendar link opens the configured booking provider. Form submission itself does not reserve a time.
-- Click-to-call and direct WhatsApp contact.
+## Visitor experience
 
-The workflow portfolio contains examples, not claimed client projects. No customer testimonials, invented success rates, or guaranteed staffing reductions are used. Confirm that the listed service offerings match what the business can deliver before making the site public.
+- Free automation audit is the main offer. A demo call remains available in the enquiry selector and mobile navigation.
+- Seven outcome-focused services; 16 process choices with a problem, workflow and outcome; 12 industries with four relevant ideas each. Phone visitors get compact dropdowns instead of a large button grid.
+- Three illustrative workflow cards. Desktop tabs select one; mobile cards stack at 96/112/128px with one focused highlight. Reduced motion and short landscape screens use flat cards. No removed 3D frame section was restored.
+- Sales demo progresses through seven stages; support and operations retain four stages. All demos are local simulations. The 36-second film loads its source only on request, with controls, captions and transcript; closing pauses playback.
+- Honest example automation cards disclose before, problem, possible automation, potential outcome/impact and example tools. No fake clients, testimonials, figures or results are used. Use `kind: "verified"` only for an actual project; optional `company` and `hoursSaved` fields then become visible. Substantiate all published outcomes first.
+- Four connected project stages with expandable deliverables; practical differentiators and expandable security principles. Pricing has three scope categories, cost drivers and individually agreed quotes, with no invented fixed prices.
+- Twelve FAQs; six additional questions sit in a disclosure to keep the page compact on phones.
+- Five pages: home, pricing, trust, privacy and website terms. Legal notices describe actual website behavior; project-specific commercial and data terms are agreed separately.
 
-## Publishing
+## Calculator
 
-Vercel website: https://autixai-site.vercel.app. Project: "autixai-site" in suryachandra27052008-3423s-projects.
+Choose team workload (people × repetitive hours/person/week) or one task (tasks/day × minutes/task × working days ÷ 60). Monthly hours use 52/12 weeks; annual values use 52 weeks. Estimated automatable percentage gives potential capacity returned; value multiplies that capacity by the visitor's hourly staff cost. Optional visitor-entered setup and recurring costs give illustrative net capacity value and payback. Capacity value is not necessarily cash saved or a staffing reduction. These are estimates; actual results depend on the workflow and implementation.
 
-Sites identity is stored in `.openai/hosting.json`. The site starts private. Source assets in `dist` are maintained directly; no build step or package installation is required. DM Sans (body and controls) and Cinzel (headings) are self-hosted in `dist/fonts`, with attribution and license records. Light brown `#C7A98A` warms the glass surfaces and section backgrounds.
+INR and USD have separate editable cost scenarios, with example starting rates of ₹250 and $25. Switching preserves each scenario's assumptions without FX conversion. The enquiry handoff appends the current summary once, preserves existing notes and protects the maximum field length. A local WebMCP tool can configure the task model; it transmits no data.
 
-Vercel hosting is configured by `vercel.json` to serve `dist`, with no build step. `.vercelignore` excludes Sites metadata and local scratch files. The old Sites canonical URL is omitted from this Vercel version.
+## Contact and optional integrations
 
-On screens up to 800px wide, all three portfolio cards form a sticky stacking deck at 96px, 112px, and 128px. A passive scroll listener batches reads with requestAnimationFrame; one card receives a subtle scale and border highlight. Reduced-motion users and short landscape screens get a flat deck. All cards remain available without JavaScript or IntersectionObserver.
+`content/site-content.json` contains the real business number and optional email/socials. Leave unknown email/socials empty; unconfigured links are omitted. `dist/site-config.js` is public configuration, never a place for secrets:
 
-## Compact mobile layout
+- `webhookUrl`: optional public HTTPS JSON endpoint. Preparing an enquiry never sends to it. After viewing the preview, a visitor must explicitly select the separate direct-send button. The endpoint must allow the site's origin through CORS, validate input and implement suitable spam/duplicate controls. Fields: name, business, industry, phone, optional email, interest, challenge, optional teamSize/timeSpent/tools, source and submittedAt. The page confirms receipt only for successful responses; error/timeout keeps WhatsApp and calling available. Localhost HTTP is accepted only while previewing on localhost for synthetic QA.
+- `calendarUrl`: optional HTTPS booking-provider URL. A real configured link appears after preparing a draft; the form itself does not book a slot.
+- `founderName` / `linkedinUrl`: optional verified founder information. The current card identifies the AutixAI team until details are supplied.
+- `caseStudy`: retained optional `{title,result}` for the existing verified-build callout. Detailed project cards live in the content file.
+- `analyticsEnabled`: false by default. No analytics requests, cookies, IDs or form storage are added. To integrate analytics, define a consent-aware `window.AUTIXAI_ANALYTICS_HANDLER(eventName)` and explicitly enable the setting; update privacy notices before activating it. The handler receives only a fixed event name, never contact, business, calculator or free-text values. Handler errors cannot block normal actions.
 
-The full 3D scroll section and its frames, canvas runtime, and offline renderer have been removed. On screens up to 800px, services use native expandable rows, workflow examples form a scrollable deck with jump buttons, and the calculator can be expanded on demand. The inquiry form is always open. Contact and demo links open the inquiry form automatically. Desktop descriptions and the three-column workflow layout remain available.
+Events: hero_cta, automation_audit_click, whatsapp_click, contact_form_start, audit_request_prepared, contact_form_complete, calculator_usage, service_card_click, pricing_enquiry. The completion event means successful direct receipt or opening a prepared WhatsApp draft; it cannot confirm that the visitor tapped Send in WhatsApp. Calculator input events may be frequent; debounce/batch them in the chosen integration.
 
-Mobile spacing and copy are shorter, the process uses a compact two-column layout, and a demo button remains visible in the phone header. The olive, beige, light brown, and Cinzel identity stays in place, with DM Sans for legible body text, a minimum 12px type size, and darker secondary text. The connected workflow map uses keyboard-accessible tabs on desktop and shows all three examples on phones. Expanded details name the trigger, inputs, example tools, human review points, steps, and business output.
+The form collects the process and industry, with optional workload/tool fields in a disclosure. It validates locally and shows the exact structured WhatsApp draft before opening WhatsApp. Visitors tap Send there themselves. Neither the form nor calculator saves inputs in browser storage. Webhook notices update on home, trust and privacy pages when a valid endpoint is configured. Test both direct receipt and error/timeout paths against the real service before enabling it publicly.
 
-## Added business information
+## Hosting and assets
 
-- The contact section explains the demo agenda, takeaways, and preparation. Requests still prepare a WhatsApp draft; no automated booking or fixed call duration is claimed.
-- Project-stage disclosures explain scoped deliverables. A guided starting-point selector recommends discovery, a scoped build, or a workflow review and sets the inquiry interest.
-- `/pricing/` describes project scoping, cost drivers, recurring provider costs, and handover without invented fixed fees.
-- `/trust/` describes design questions and scope-dependent data, permissions, AI providers, human approval, ownership, and support. It distinguishes these from factual website inquiry behavior; it makes no certification claims.
-- Shared navigation and year rendering live in `dist/common.js`; secondary pages do not load the home-page app runtime.
+`vercel.json` serves `dist` with no framework, build or install. `.vercelignore` excludes source-branding files, local scripts and metadata. All five pages have canonical URLs, social metadata and Organization schema. Home FAQPage data comes from the same FAQ source as the visible answers. Search engine enhanced display is not guaranteed.
 
-## Workflow film
-
-`dist/media/lead-workflow.mp4` is an original, silent 36-second H.264 diagram animation (960×540, 24fps). It illustrates inquiry capture, AI qualification, CRM sync, human approval, and approved follow-up. It is not a customer recording. A poster, English WebVTT captions, and HTML transcript are included. The video source is assigned only when the visitor opens the player; controls support normal play, pause, and seeking. Closing the player pauses playback.
-
-To regenerate it, install Pillow in your local Python environment, ensure FFmpeg is on PATH, and run `python scripts/render-workflow-film.py`. The rendering script is excluded from Vercel deployment.
-
-## Logo
-
-The complete original logo supplied by the user appears in the header and footer of all three pages. `dist/branding/autixai-logo-original.jpg` is an unchanged copy, including the olive circle, white border, beige background, and original lettering. CSS uses `object-fit: contain` so the graphic is neither cropped nor stretched. An adjacent brand name keeps the compact phone header legible.
-
-The source image and unused generated wordmark drafts are retained in `branding`, excluded from deployment. The site uses the original image rather than those drafts.
-
-## Workflow motion
-
-The hero and portfolio workflows use travelling signals and staggered node highlights. Expanded demos include an animated four-step route, progress highlights, and completion checkmarks. These remain local simulations. Meshes appear in the hero and contact section, and decorative motion pauses off screen. Reduced-motion preferences disable animations.
-
-## Public website configuration
-
-Edit `dist/site-config.js` to connect real services. Leave unknown values empty. Do not put API keys, tokens, or other secrets in this public file.
-
-- `webhookUrl`: public lead endpoint accepting JSON POSTs. It must allow the production site origin through CORS. Receive name, business, phone, optional email, interest, challenge, source, and submission timestamp. Add server-side validation, deduplication, and spam controls at the endpoint. The UI confirms only successful HTTP responses; failures/timeouts keep the WhatsApp/call fallback available. Without this URL, no lead capture request is made.
-- `calendarUrl`: HTTPS Cal.com/Calendly booking page. The secondary booking CTA appears only when configured; no placeholder link is published.
-- `founderName` and `linkedinUrl`: optional verified founder details. Until supplied, the card identifies the AutixAI team and uses the existing direct business number.
-- `caseStudy`: optional `{title, result}` using verified project details. The current public callout is clearly labelled an illustrative example; no delivery-time or downtime claim is invented.
-
-Update the asset version query in all page HTML whenever scripts/config/styles change so returning visitors load the update. Configured webhook behavior also updates the inquiry notice on the home and trust pages.
-
-## Conversion, currency, and sharing
-
-The calculator has independent INR and USD scenarios, with starting hourly rates of INR 250 and USD 25. Switching preserves that scenario's entered costs; it does not perform FX conversion. Calculation inquiries append a concise current summary without duplicating it or overwriting business notes, choose the automation-opportunities interest, and focus the notes field.
-
-All three pages have absolute Open Graph/Twitter URLs and use `dist/assets/og-preview.png` (1200×630). The home page includes Organization and FAQPage JSON-LD matching the five visible FAQ answers. Search-engine display of enhanced results is not guaranteed.
-
-DM Sans is self-hosted as a 36.9KB Latin variable WOFF2 from Google Fonts, licensed under the SIL Open Font License included in `dist/fonts/DM-Sans-OFL.txt`. Source: https://github.com/google/fonts/tree/main/ofl/dmsans. Cinzel remains self-hosted. No framework or browser font-service request was added.
+Body and heading fonts are self-hosted with licenses in `dist/fonts`; no external font service is loaded. Social preview is the existing 1200×630 `dist/assets/og-preview.png`. The original supplied logo is `dist/branding/autixai-logo-original.jpg`. No stock client logos, fabricated trust signals, heavy animation library or new runtime dependency was added. The film source renderer is retained at `scripts/render-workflow-film.py` and excluded from deployment.

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://autixai-site.vercel.app/sitemap.xml
