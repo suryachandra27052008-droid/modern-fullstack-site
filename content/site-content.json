@@ -1,6 +1,44 @@
 {
   "contact": {"name":"AutixAI","phone":"+919617310042","displayPhone":"+91 96173 10042","whatsapp":"919617310042","email":"","socials":[]},
   "navigation": [{"label":"Services","href":"/#services"},{"label":"How it works","href":"/#process"},{"label":"Case studies","href":"/#case-studies"},{"label":"Pricing","href":"/pricing/"},{"label":"FAQ","href":"/#faq"},{"label":"Contact","href":"/#contact"}],
+  "assistant": {
+    "greeting": "Hi 👋 I’m the AutixAI assistant.\n\nTell me what your business does or describe a repetitive task you want to automate, and I’ll suggest where AI or automation might help.",
+    "process": ["Discover", "Design", "Build", "Improve"],
+    "processDescription": "We discover the repetitive work, design the workflow and approval points, build and test the connections, then improve the system with your team.",
+    "auditDescription": "The initial automation audit is free. We discuss your process, identify a useful starting point and outline a possible workflow. Implementation and any additional discovery work are scoped and quoted separately before you commit.",
+    "pricingDescription": "Pricing depends on the workflow, connections and controls required. After understanding your process, AutixAI provides a clear scope and quote before development. There are no fixed prices published on this website.",
+    "integrationNote": "Connections depend on API access, product plans and permissions. A listed tool is an example, not a promised connection or an official partnership.",
+    "reviewNote": "Keep a person involved for exceptions, sensitive messages, financial changes and decisions that need judgment. This is an illustrative workflow; feasibility is confirmed during discovery.",
+    "securityDescription": "Limit access to the systems a workflow needs, keep credentials out of frontend code, and include human review for critical actions. Testing, monitoring, ownership and handover are agreed in the project scope. No certification or compliance guarantee is claimed.",
+    "capacityDescription": "Automation can reduce repetitive work and give your team more time for customers and decisions. Actual time returned depends on the process and implementation; it is not a guarantee of cash savings or a staffing reduction.",
+    "industryKeywords": {
+      "ecommerce":["ecommerce","e commerce","online store","online shop","shopify","woocommerce"],
+      "retail":["retail","shop","store"],"jewellery":["jewellery","jewelry","jeweller","jeweler"],
+      "realestate":["real estate","property","realtor"],"professional":["professional","consulting","consultancy","law firm","accounting"],
+      "healthcare":["healthcare","health care","clinic","hospital","dentist"],"education":["education","school","college","coaching","tuition"],
+      "logistics":["logistics","shipping","courier","transport"],"hospitality":["hospitality","hotel","restaurant","cafe"],
+      "agencies":["agency","agencies","marketing"],"manufacturing":["manufacturing","factory","manufacturer"],"finance":["finance","financial","bookkeeping"]
+    },
+    "areaKeywords": {
+      "leads":["lead","leads","enquiry","enquiries","inquiry","inquiries","sales"],"whatsapp":["whatsapp","whats app"],
+      "support":["support","customer service","customer questions","faq","faqs"],"crm":["crm","customer records"],
+      "orders":["order","orders","fulfilment","fulfillment","returns"],"followups":["follow up","follow ups","followup","followups","chasing"],
+      "appointments":["appointment","appointments","booking","bookings","scheduling"],"payments":["invoice","invoices","payment","payments","reconciliation"],
+      "entry":["data entry","copying","copy paste","spreadsheet entry"],"reports":["report","reports","reporting","analytics","dashboard"],
+      "inventory":["inventory","stock","reorder"],"operations":["operations","admin","task assignment","approvals"],
+      "email":["email","emails","inbox"],"onboarding":["onboarding","new joiner","employee intake"],
+      "assistants":["internal assistant","knowledge lookup","document search"],"custom":["custom workflow","custom automation","something else","other process"]
+    },
+    "industryAreas": {
+      "ecommerce":["orders","inventory","support","whatsapp"],"retail":["inventory","whatsapp","reports","orders"],
+      "jewellery":["whatsapp","appointments","orders","inventory"],"realestate":["leads","crm","appointments","followups"],
+      "professional":["onboarding","appointments","followups","reports"],"healthcare":["appointments","support","operations","reports"],
+      "education":["leads","followups","onboarding","operations"],"logistics":["orders","operations","entry","reports"],
+      "hospitality":["appointments","whatsapp","operations","reports"],"agencies":["onboarding","leads","reports","operations"],
+      "manufacturing":["operations","inventory","reports","entry"],"finance":["payments","entry","operations","reports"]
+    },
+    "areaServices": {"leads":1,"whatsapp":3,"support":0,"crm":4,"orders":2,"followups":1,"appointments":2,"payments":2,"entry":4,"reports":5,"inventory":4,"operations":2,"email":2,"onboarding":2,"assistants":6,"custom":6}
+  },
   "services": [
     {"title":"AI Customer Support","description":"Answer repeat questions using your approved business knowledge and route exceptions to a person.","workflow":"Question → knowledge lookup → answer or handover","benefit":"Quicker responses, with context for your support team."},
     {"title":"Lead & Sales Automation","description":"Capture inquiries, qualify prospects and keep follow-ups moving across your sales tools.","workflow":"Lead → qualification → CRM → owner → follow-up","benefit":"Less chasing and fewer leads left waiting."},

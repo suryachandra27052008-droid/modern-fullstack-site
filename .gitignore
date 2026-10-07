@@ -1,3 +1,4 @@
 .vercel/
 .render-runtime/
 .qa/
+node_modules/
