@@ -49,7 +49,7 @@
   const allowed = new Set(['hero_cta','automation_audit_click','whatsapp_click','contact_form_start','audit_request_prepared','contact_form_complete','calculator_usage','service_card_click','pricing_enquiry','assistant_opened','assistant_message_sent','assistant_quick_action_clicked','assistant_audit_requested','assistant_whatsapp_handoff','assistant_error']);
   window.AutixAIEvents = Object.freeze({ track(name) {
     const config = window.AUTIXAI_CONFIG || {};
-    if (!allowed.has(name) || !config.analyticsEnabled || typeof window.AUTIXAI_ANALYTICS_HANDLER !== 'function') return;
+    if (!allowed.has(name) || !config.analyticsEnabled || !window.AutixAIPrivacy?.allowsAnalytics() || typeof window.AUTIXAI_ANALYTICS_HANDLER !== 'function') return;
     try { window.AUTIXAI_ANALYTICS_HANDLER(name); } catch { /* Analytics must never interrupt visitor actions. */ }
   }});
   document.addEventListener('click', event => {

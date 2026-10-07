@@ -78,10 +78,10 @@ test('WhatsApp draft includes only reviewed audit fields, never a transcript', (
   const encoded = new URL(`https://wa.me/${data.contact.whatsapp}?text=${encodeURIComponent(draft)}`);
   assert.equal(encoded.searchParams.get('text'), draft);
 });
-test('published knowledge and lazy loader are present on all five pages', () => {
+test('published knowledge and lazy loader are present on all eight pages', () => {
   const runtime = JSON.parse(readFileSync(new URL('../dist/assistant-data.json', import.meta.url)));
   for (const key of ['contact','services','areas','industries','integrations','faq','assistant']) assert.deepEqual(runtime[key], data[key]);
-  for (const slug of ['','pricing/','trust/','privacy/','terms/']) {
+  for (const slug of ['','pricing/','trust/','privacy/','terms/','cookies/','refunds/','accessibility/']) {
     const html = readFileSync(new URL(`../dist/${slug}index.html`, import.meta.url), 'utf8');
     assert.equal((html.match(/src="\/assistant-loader\.js/g) || []).length, 1);
     assert.ok(!html.includes('src="/assistant.js'));

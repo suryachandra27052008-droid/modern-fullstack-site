@@ -1,4 +1,4 @@
-import { createGuide, validateAudit, buildAuditDraft, MAX_MESSAGE } from './assistant-engine.js?v=20261008.1';
+import { createGuide, validateAudit, buildAuditDraft, MAX_MESSAGE } from './assistant-engine.js?v=20261008.3';
 
 const node = (tag, className = '', text = '') => {
   const element = document.createElement(tag); element.className = className;
@@ -172,7 +172,7 @@ export function createAssistant({ button, data }) {
       });
     });
     const submit = node('button', 'ax-primary', 'Review my WhatsApp request →'); submit.type = 'submit'; form.append(submit);
-    form.append(node('p', 'ax-field-hint', 'Preparing a draft sends nothing. You decide whether to open WhatsApp and tap Send there.'));
+    form.append(node('p', 'ax-field-hint', 'Preparing a draft sends nothing. You decide whether to open WhatsApp and tap Send there. AutixAI uses the details you send to answer this enquiry; this does not subscribe you to marketing. Please avoid confidential records and children’s personal data.'));
     const preview = node('section', 'ax-audit-preview'); preview.hidden = true;
     const previewTitle = node('h4', '', 'Your exact WhatsApp draft'); previewTitle.tabIndex = -1;
     const text = node('pre', 'ax-draft');

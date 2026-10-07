@@ -45,6 +45,10 @@
     } finally { clearTimeout(timeout); loading = false; button.removeAttribute('aria-busy'); }
   });
   // Make room for the phone keyboard while visitors use the main website form.
-  const update = () => { button.classList.toggle('autixai-input-active', /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '') && !document.activeElement.closest('#autixai-assistant')); };
+  const update = () => {
+    const active = document.activeElement;
+    const usingForm = active?.closest('#inquiry-form,#privacy-request-form');
+    button.classList.toggle('autixai-input-active', !!usingForm || (/^(INPUT|TEXTAREA|SELECT)$/.test(active?.tagName || '') && !active.closest('#autixai-assistant')));
+  };
   document.addEventListener('focusin', update); document.addEventListener('focusout', () => requestAnimationFrame(update));
 })();

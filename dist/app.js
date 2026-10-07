@@ -164,7 +164,7 @@ let stopMobileCardEffects = () => {};
 function configureMobileCardEffects() {
   stopMobileCardEffects();
   stackCards.forEach(card => { card.classList.remove('is-stack-focus'); card.style.transform = ''; });
-  if (!mobileCardMedia.matches || reducedCardMotion.matches) return;
+  if (!mobileCardMedia.matches || reducedCardMotion.matches || document.documentElement.hasAttribute('data-motion-paused')) return;
   let frame = 0;
   let visible = true;
   const render = () => {
@@ -189,6 +189,7 @@ function configureMobileCardEffects() {
 }
 mobileCardMedia.addEventListener('change', configureMobileCardEffects);
 reducedCardMotion.addEventListener('change', configureMobileCardEffects);
+window.addEventListener('autixai:motionchange', configureMobileCardEffects);
 configureMobileCardEffects();
 
 const form = document.getElementById('inquiry-form');
@@ -197,15 +198,17 @@ const formFields = [...form.querySelectorAll('input,select,textarea')];
 formFields.forEach(input => {
   const error = document.createElement('span');
   error.id = `${input.id}-error`; error.className = 'field-error'; error.hidden = true;
-  input.setAttribute('aria-describedby',error.id); input.after(error);
+  input.setAttribute('aria-describedby',`${input.getAttribute('aria-describedby') || ''} ${error.id}`.trim()); input.after(error);
 });
 function validateField(input, showError = true) {
   input.setCustomValidity('');
   if (input.required && !input.value.trim()) input.setCustomValidity('Please complete this field.');
+  const missingContact = input.id === 'phone' && !form.elements.phone.value.trim() && !form.elements.email.value.trim();
+  if (missingContact) input.setCustomValidity('Provide a phone number OR an email. One is enough.');
   if (input.id === 'phone' && input.value.trim() && input.value.replace(/\D/g,'').length < 7) input.setCustomValidity('Enter a contact number containing at least 7 digits.');
   const valid = input.validity.valid;
   const error = document.getElementById(`${input.id}-error`);
-  error.textContent = valid ? '' : input.validity.typeMismatch ? 'Enter a valid email address.' : input.id === 'phone' ? 'Enter a contact number with 7–25 digits, spaces, or phone symbols.' : input.validationMessage;
+  error.textContent = valid ? '' : missingContact ? input.validationMessage : input.validity.typeMismatch ? 'Enter a valid email address.' : input.id === 'phone' ? 'Enter a contact number with 7–25 characters and at least 7 digits.' : input.validationMessage;
   error.hidden = valid || !showError;
   input.setAttribute('aria-invalid', String(!valid && showError));
   return valid;
@@ -240,7 +243,7 @@ function prepareInquiry() {
   currentCapture = '';
   const values = Object.fromEntries(new FormData(form));
   Object.keys(values).forEach(key => { values[key] = values[key].trim(); });
-  const message = [`Hi ${businessContact.name},`, values.interest === 'Free automation audit' ? 'I would like a free automation audit.' : `I would like to discuss: ${values.interest.toLowerCase()}.`, '', `Name: ${values.name}`, `Business: ${values.business}`, `Industry: ${values.industry}`, `Phone / WhatsApp: ${values.phone}`, ...(values.email ? [`Email: ${values.email}`] : []), '', 'Process I want to automate:', values.challenge, '', `Current tools: ${values.tools || 'To discuss'}`, `Approximate time spent: ${values.timeSpent || 'To discuss'}`, `Team size: ${values.teamSize || 'To discuss'}`].join('\n');
+  const message = [`Hi ${businessContact.name},`, values.interest === 'Free automation audit' ? 'I would like a free automation audit.' : `I would like to discuss: ${values.interest.toLowerCase()}.`, '', `Name: ${values.name}`, `Business: ${values.business}`, `Industry: ${values.industry}`, ...(values.phone ? [`Phone / WhatsApp: ${values.phone}`] : []), ...(values.email ? [`Email: ${values.email}`] : []), '', 'Process I want to automate:', values.challenge, '', `Current tools: ${values.tools || 'To discuss'}`, `Approximate time spent: ${values.timeSpent || 'To discuss'}`, `Team size: ${values.teamSize || 'To discuss'}`].join('\n');
   preparedValues = values;
   window.AutixAIEvents.track('audit_request_prepared');
   document.getElementById('inquiry-preview').textContent = message;
@@ -256,9 +259,23 @@ form.addEventListener('submit', event => {
   if (invalid.length) { const disclosure = invalid[0].closest('.process-context'); if (disclosure) disclosure.open = true; invalid[0].focus(); return; }
   prepareInquiry();
 });
-form.addEventListener('input', event => { result.hidden = true; preparedValues = null; currentCapture = ''; if (formFields.includes(event.target)) validateField(event.target); });
+function clearPreparedInquiry() {
+  result.hidden = true; preparedValues = null; currentCapture = '';
+  document.getElementById('send-inquiry').removeAttribute('href');
+  document.getElementById('inquiry-preview').textContent = '';
+}
+form.addEventListener('input', event => {
+  clearPreparedInquiry();
+  if (formFields.includes(event.target)) validateField(event.target);
+  if (['phone','email'].includes(event.target.id)) { validateField(form.elements.phone); validateField(form.elements.email); }
+});
+form.addEventListener('change', clearPreparedInquiry);
+form.addEventListener('reset', () => {
+  clearPreparedInquiry(); document.getElementById('form-error').hidden = true;
+  formFields.forEach(input => { input.setCustomValidity(''); input.removeAttribute('aria-invalid'); document.getElementById(`${input.id}-error`).hidden = true; });
+});
 form.querySelector('[type="submit"]').disabled = false;
-document.querySelectorAll('[data-intent]').forEach(link => link.addEventListener('click', () => { document.getElementById('interest').value = link.dataset.intent === 'demo' ? 'Book a demo call' : 'Free automation audit'; result.hidden = true; }));
+document.querySelectorAll('[data-intent]').forEach(link => link.addEventListener('click', () => { document.getElementById('interest').value = link.dataset.intent === 'demo' ? 'Book a demo call' : 'Free automation audit'; clearPreparedInquiry(); }));
 let formStarted = false;
 form.addEventListener('focusin', () => { if (!formStarted) { formStarted = true; window.AutixAIEvents.track('contact_form_start'); } });
 document.querySelectorAll('.hero-visual,.contact-section').forEach(region=>{

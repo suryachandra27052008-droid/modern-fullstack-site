@@ -4,11 +4,12 @@ from html import escape
 from urllib.parse import quote, urlsplit
 import json
 import re
+from policy_pages import POLICY_TITLES, business_details, render_policy_pages
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / 'dist'
 DATA = json.loads((ROOT / 'content/site-content.json').read_text(encoding='utf-8'))
-VERSION = '20261008.1'
+VERSION = '20261008.3'
 BASE = 'https://autixai-site.vercel.app'
 C = DATA['contact']
 e = lambda value: escape(str(value), quote=True)
@@ -47,7 +48,7 @@ def social_links():
 def footer(page):
     social=social_links()
     email=f'<a href="mailto:{e(C["email"])}">{e(C["email"])}</a>' if C.get('email') else ''
-    return f'''<footer class="site-footer"><div class="container footer-top"><div class="footer-identity">{brand()}<p>AI automation systems for modern businesses.</p></div><nav aria-label="Footer navigation">{navigation(page)}<a href="/trust/">Trust & data</a><a href="/privacy/">Privacy Policy</a><a href="/terms/">Terms</a></nav><div class="footer-contact"><a href="tel:{e(C['phone'])}">{e(C['displayPhone'])}</a><a href="{WA}" target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>{email}{social}<a data-social-link hidden target="_blank" rel="noopener noreferrer">LinkedIn ↗</a></div></div><div class="container footer-bottom"><span>© <span id="year">2026</span> AutixAI. All rights reserved.</span><span>Built around your business.</span></div></footer>'''
+    return f'''<footer class="site-footer"><div class="container footer-top"><div class="footer-identity">{brand()}<p>AI automation systems for modern businesses.</p></div><nav aria-label="Footer navigation">{navigation(page)}<a href="/trust/">Trust & data</a><a href="/privacy/">Privacy Policy</a><a href="/terms/">Terms</a><a href="/refunds/">Payments & refunds</a><a href="/cookies/">Cookies & privacy choices</a><a href="/accessibility/">Accessibility</a><a href="/privacy/#privacy-request">Privacy requests</a></nav><div class="footer-contact"><a href="tel:{e(C['phone'])}">{e(C['displayPhone'])}</a><a href="{WA}" target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>{email}{social}<a data-social-link hidden target="_blank" rel="noopener noreferrer">LinkedIn ↗</a><button type="button" class="inline-link" data-privacy-settings>Privacy & motion settings</button></div></div><div class="container footer-bottom"><span>© <span id="year">2026</span> AutixAI. All rights reserved.</span><span>Built around your business.</span></div></footer>'''
 
 def service_section():
     rows=[]
@@ -101,6 +102,9 @@ TITLES={
     'privacy':('Privacy Policy | AutixAI','How AutixAI handles website enquiries, WhatsApp drafts, hosting information and privacy requests.'),
     'terms':('Website Terms | AutixAI','Terms for using the AutixAI website, free audit enquiries, illustrative workflow demos and automation estimates.')}
 
+render_policy_pages(DIST, C, VERSION)
+TITLES.update({slug: (title+' | AutixAI', description) for slug, (title, description) in POLICY_TITLES.items()})
+
 for slug,(title,description) in TITLES.items():
     path=DIST/slug/'index.html'
     html=path.read_text(encoding='utf-8')
@@ -114,6 +118,9 @@ for slug,(title,description) in TITLES.items():
     canonical=BASE+('/'+slug+'/' if slug else '/')
     html=re.sub(r'<link rel="canonical" href="[^"]+">',f'<link rel="canonical" href="{canonical}">',html)
     html=re.sub(r'\?v=\d{8}\.\d+',f'?v={VERSION}',html)
+    html=re.sub(r'<script[^>]+src="/privacy-tools.js[^\"]*"[^>]*></script>', '',html)
+    html=html.replace('</body>',f'<script type="module" src="/privacy-tools.js?v={VERSION}"></script></body>')
+    html=re.sub(r'(<main\b[^>]*)(>)', lambda m:m[1]+(' tabindex="-1"' if 'tabindex=' not in m[1] else '')+m[2], html, count=1)
     if 'site-config.js' not in html: html=html.replace('<script src="/common.js',f'<script src="/site-config.js?v={VERSION}" defer></script><script src="/common.js',1)
     html=re.sub(r'<script src="/assistant-loader.js[^\"]*"[^>]*></script>', '',html)
     html=html.replace('</body>',f'<script src="/assistant-loader.js?v={VERSION}" data-whatsapp="{C["whatsapp"]}" defer></script></body>')
@@ -121,10 +128,15 @@ for slug,(title,description) in TITLES.items():
     org={'@context':'https://schema.org','@type':'Organization','name':C['name'],'url':BASE+'/','logo':BASE+'/branding/autixai-logo-original.jpg','description':'AI automation systems for modern businesses.','contactPoint':{'@type':'ContactPoint','telephone':C['phone'],'contactType':'sales','availableLanguage':'English'}}
     social_urls=[item['url'] for item in C.get('socials',[]) if urlsplit(item.get('url','')).scheme=='https']
     if social_urls: org['sameAs']=social_urls
+    if C.get('email'): org['email']=C['email']
+    if C.get('legalName'): org['legalName']=C['legalName']
     if not slug:
         if '<!-- content:contact-socials:start -->' not in html:
             html=re.sub(r'(<div class="contact-links">.*?</div>)',lambda m:m[1]+'<!-- content:contact-socials:start --><!-- content:contact-socials:end -->',html,count=1,flags=re.S)
         html=block(html,'contact-socials',f'<div class="contact-socials">{social_links()}</div>' if social_links() else '')
+        if '<!-- content:business-details:start -->' not in html:
+            html=html.replace('<!-- content:contact-socials:end -->','<!-- content:contact-socials:end --><!-- content:business-details:start --><!-- content:business-details:end -->',1)
+        html=block(html,'business-details',f'<details class="business-note"><summary>Business & policy details</summary>{business_details(C)}<p><a href="/terms/">Website terms</a> · <a href="/refunds/">Payments & refunds</a> · <a href="/privacy/#privacy-request">Privacy requests</a></p></details>')
         html=html.replace('class="text-link" href="#contact">Get My Free Automation Audit','class="text-link" href="#contact" data-intent="audit">Get My Free Automation Audit')
         html=block(html,'services',service_section())
         html=block(html,'cases',cases())
@@ -154,8 +166,9 @@ runtime={key:DATA[key] for key in ['contact','areas','industries']}
 (DIST/'content-data.js').write_text("'use strict';\n// Generated by scripts/update-content.py. Edit content/site-content.json.\nwindow.AUTIXAI_CONTENT = "+json.dumps(runtime,ensure_ascii=False).replace('<','\\u003c')+';\n',encoding='utf-8')
 assistant_data={key:DATA[key] for key in ['contact','areas','industries','services','integrations','pricing','faq','assistant']}
 (DIST/'assistant-data.json').write_text(json.dumps(assistant_data,ensure_ascii=False,separators=(',',':'))+'\n',encoding='utf-8')
-assistant_module=DIST/'assistant.js'
-assistant_module.write_text(re.sub(r'\?v=\d{8}\.\d+',f'?v={VERSION}',assistant_module.read_text(encoding='utf-8')),encoding='utf-8')
+for filename in ['assistant.js', 'privacy-tools.js']:
+    module=DIST/filename
+    module.write_text(re.sub(r'\?v=\d{8}\.\d+',f'?v={VERSION}',module.read_text(encoding='utf-8')),encoding='utf-8')
 (DIST/'robots.txt').write_text(f'User-agent: *\nAllow: /\nSitemap: {BASE}/sitemap.xml\n',encoding='utf-8')
 (DIST/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join(f'<url><loc>{BASE+"/"+slug+"/" if slug else BASE+"/"}</loc></url>' for slug in TITLES)+'</urlset>\n',encoding='utf-8')
-print('Updated five pages, shared components, structured data and discovery files.')
+print(f'Updated {len(TITLES)} pages, shared components, structured data and discovery files.')

@@ -1,5 +1,5 @@
 {
-  "contact": {"name":"AutixAI","phone":"+919617310042","displayPhone":"+91 96173 10042","whatsapp":"919617310042","email":"","socials":[{"label":"Instagram ↗","url":"https://www.instagram.com/autixai.in/"}]},
+  "contact": {"name":"AutixAI","phone":"+919617310042","displayPhone":"+91 96173 10042","whatsapp":"919617310042","email":"","legalName":"","city":"","address":"","socials":[{"label":"Instagram ↗","url":"https://www.instagram.com/autixai.in/"}]},
   "navigation": [{"label":"Services","href":"/#services"},{"label":"How it works","href":"/#process"},{"label":"Case studies","href":"/#case-studies"},{"label":"Pricing","href":"/pricing/"},{"label":"FAQ","href":"/#faq"},{"label":"Contact","href":"/#contact"}],
   "assistant": {
     "greeting": "Hi 👋 I’m the AutixAI assistant.\n\nTell me what your business does or describe a repetitive task you want to automate, and I’ll suggest where AI or automation might help.",
