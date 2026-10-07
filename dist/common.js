@@ -61,5 +61,5 @@
       if (link.id === 'send-inquiry') window.AutixAIEvents.track('contact_form_complete');
     }
   });
-  document.querySelectorAll('[data-service]').forEach(row => row.querySelector('summary').addEventListener('click', () => window.AutixAIEvents.track('service_card_click')));
+  document.querySelectorAll('[data-service]').forEach(row => row.querySelector('summary')?.addEventListener('click', () => window.AutixAIEvents.track('service_card_click')));
 })();

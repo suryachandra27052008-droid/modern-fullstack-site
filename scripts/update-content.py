@@ -9,7 +9,7 @@ from policy_pages import POLICY_TITLES, business_details, render_policy_pages
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / 'dist'
 DATA = json.loads((ROOT / 'content/site-content.json').read_text(encoding='utf-8'))
-VERSION = '20261008.3'
+VERSION = '20261008.5'
 BASE = 'https://autixai-site.vercel.app'
 C = DATA['contact']
 e = lambda value: escape(str(value), quote=True)
@@ -52,14 +52,12 @@ def footer(page):
 
 def service_section():
     rows=[]
+    icons=['M5 5h22v17H14l-7 5v-5H5z M10 11h12 M10 16h8', 'M6 24 15 15l5 5L27 7 M19 7h8v8', 'M6 6h8v8H6z M18 6h8v8h-8z M6 18h8v8H6z M18 18h8v8h-8z', 'M26 15a11 11 0 0 1-16 10l-6 2 2-6A11 11 0 1 1 26 15z M11 10c1 5 4 8 9 9', 'M8 8h5 M19 8h5 M8 24h5 M19 24h5 M16 11v10 M13 8h6v6h-6z M13 20h6v6h-6z', 'M6 26V15h4v11 M14 26V6h4v20 M22 26V11h4v15', 'M16 4l3 9 9 3-9 3-3 9-3-9-9-3 9-3z']
     for i,s in enumerate(DATA['services'],1):
-        rows.append(f'''<details class="service" open data-service="{e(s['title'])}"><summary><span class="service-number">{i:02}</span><h3>{e(s['title'])}</h3><span class="service-toggle" aria-hidden="true">+</span></summary><div class="service-description"><p>{e(s['description'])}</p><p class="service-workflow"><strong>Example workflow</strong>{e(s['workflow'])}</p><p class="service-benefit"><strong>Business benefit</strong>{e(s['benefit'])}</p></div></details>''')
-    choices=''.join(f'<button type="button" data-area="{e(a["id"])}" aria-pressed="{str(i==0).lower()}">{e(a["title"])}</button>' for i,a in enumerate(DATA['areas']))
-    options=''.join(f'<option value="{e(a["id"])}">{e(a["title"])}</option>' for a in DATA['areas'])
+        rows.append(f'''<article class="service-card glass" role="group" aria-roledescription="slide" aria-label="{i} of {len(DATA['services'])}: {e(s['title'])}"><div class="service-card-top"><span class="service-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="{icons[(i-1)%len(icons)]}"/></svg></span><span class="service-index">{i:02} / {len(DATA['services']):02}</span></div><h3>{e(s['title'])}</h3><p class="service-card-copy">{e(s['description'])}</p><div class="service-card-workflow"><span>EXAMPLE WORKFLOW</span><p>{e(s['workflow'])}</p></div><p class="service-card-benefit">{e(s['benefit'])}</p><a class="service-card-link" href="#contact" data-intent="audit" data-track="service_card_click" data-service-link="{e(s['title'])}" aria-label="Discuss {e(s['title'])}">Let’s build this<span aria-hidden="true">↗</span></a></article>''')
     industries=''.join(f'<option value="{e(a["id"])}">{e(a["title"])}</option>' for a in DATA['industries'])
-    area=DATA['areas'][0];industry=DATA['industries'][0]
-    return f'''<section id="services" class="container section"><div class="section-heading"><div><div class="eyebrow accent-text">01 / WHAT WE DO</div><h2>A smarter way<br>to get work done.</h2></div><p>Practical systems for sales, support and operations. Remove repeat work so your people can focus on customers and decisions.</p></div><div class="services-grid">{''.join(rows)}</div>
-<div class="opportunity-explorer"><div class="compact-heading"><span class="eyebrow accent-text">FIND YOUR STARTING POINT</span><h3>What could your business automate?</h3><p>Choose a process to see the problem, a possible workflow and the business outcome.</p></div><div class="area-buttons" role="group" aria-label="Choose an automation area">{choices}</div><div class="area-select"><label for="automation-area">Choose a process</label><select id="automation-area">{options}</select></div><article class="opportunity-card glass" aria-labelledby="area-title"><h4 id="area-title">{e(area['title'])}</h4><dl><div><dt>Problem</dt><dd id="area-problem">{e(area['problem'])}</dd></div><div><dt>Automation</dt><dd id="area-automation">{e(area['automation'])}</dd></div><div><dt>Business outcome</dt><dd id="area-outcome">{e(area['outcome'])}</dd></div></dl><p id="area-status" class="sr-only" role="status"></p><a id="area-inquiry" class="text-link" href="#contact" data-intent="audit">Get My Free Automation Audit →</a></article></div>
+    industry=DATA['industries'][0]
+    return f'''<section id="services" class="container section"><div class="section-heading"><div><div class="eyebrow accent-text">01 / WHAT WE DO</div><h2>A smarter way<br>to get work done.</h2></div><p>Practical systems for sales, support and operations. Remove repeat work so your people can focus on customers and decisions.</p></div><div class="service-carousel" role="region" aria-roledescription="carousel" aria-label="Business automation services"><div class="service-carousel-bar"><p id="service-scroll-hint">Seven ways to take work off your plate. Swipe to explore.</p><div class="service-carousel-controls" hidden><button type="button" data-service-prev aria-label="Previous service">←</button><button type="button" data-service-pause aria-pressed="false">Pause motion</button><button type="button" data-service-next aria-label="Next service">→</button></div></div><div class="service-viewport" tabindex="0" aria-label="Scroll through seven services" aria-describedby="service-scroll-hint"><div class="services-grid service-track">{''.join(rows)}</div></div><p class="sr-only" id="service-motion-status" role="status"></p></div>
 <div class="industry-explorer"><div><h3>Built around your business.</h3><p>Choose your industry for a few practical ideas.</p><label for="industry-choice">Your industry</label><select id="industry-choice">{industries}</select></div><div class="industry-ideas"><h4 id="industry-title">Ideas for {e(industry['title'])}</h4><ul id="industry-ideas">{''.join(f'<li>{e(idea)}</li>' for idea in industry['ideas'])}</ul><a id="industry-inquiry" class="text-link" href="#contact" data-intent="audit">Discuss these ideas →</a><p id="industry-status" class="sr-only" role="status"></p></div></div><noscript><p class="input-hint">Interactive choices need JavaScript. The examples above and all service descriptions remain available.</p></noscript></section>'''
 
 def cases():
@@ -120,6 +118,8 @@ for slug,(title,description) in TITLES.items():
     html=re.sub(r'\?v=\d{8}\.\d+',f'?v={VERSION}',html)
     html=re.sub(r'<script[^>]+src="/privacy-tools.js[^\"]*"[^>]*></script>', '',html)
     html=html.replace('</body>',f'<script type="module" src="/privacy-tools.js?v={VERSION}"></script></body>')
+    html=re.sub(r'<script[^>]+src="/card-effects.js[^\"]*"[^>]*></script>', '',html)
+    html=html.replace('</body>',f'<script src="/card-effects.js?v={VERSION}" defer></script></body>')
     html=re.sub(r'(<main\b[^>]*)(>)', lambda m:m[1]+(' tabindex="-1"' if 'tabindex=' not in m[1] else '')+m[2], html, count=1)
     if 'site-config.js' not in html: html=html.replace('<script src="/common.js',f'<script src="/site-config.js?v={VERSION}" defer></script><script src="/common.js',1)
     html=re.sub(r'<script src="/assistant-loader.js[^\"]*"[^>]*></script>', '',html)

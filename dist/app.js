@@ -151,10 +151,6 @@ runButton.addEventListener('click', () => {
 });
 document.getElementById('workflow-inquiry').addEventListener('click', () => { if (activeWorkflow) { inquiryDisclosure.open = true; result.hidden = true; document.getElementById('interest').value = workflows[activeWorkflow].interest; document.getElementById('challenge').focus({ preventScroll:true }); } });
 
-if (matchMedia('(hover: hover) and (prefers-reduced-motion: no-preference)').matches) {
-  document.querySelectorAll('.portfolio-card').forEach(card => { card.addEventListener('pointermove', event => { if (matchMedia('(max-width: 800px), (prefers-reduced-motion: reduce)').matches) return; const bounds = card.getBoundingClientRect(); const x = (event.clientX - bounds.left) / bounds.width - .5; const y = (event.clientY - bounds.top) / bounds.height - .5; card.style.transform = `translateY(-7px) rotateY(${x * 5}deg) rotateX(${-y * 5}deg)`; }); card.addEventListener('pointerleave', () => { card.style.transform = ''; }); });
-}
-
 // At most one mobile workflow card is highlighted. Scroll reads are batched per frame.
 const mobileCardMedia = matchMedia('(max-width: 800px)');
 const reducedCardMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -284,7 +280,6 @@ document.querySelectorAll('.hero-visual,.contact-section').forEach(region=>{
 
 // Keep mobile journeys compact, with the full content available on demand.
 const compactLayout = matchMedia('(max-width: 800px)');
-const serviceRows = [...document.querySelectorAll('details.service')];
 const workflowTabs = document.querySelector('.workflow-tabs');
 const tabButtons = [...workflowTabs.querySelectorAll('[data-workflow-tab]')];
 const workflowCards = [...document.querySelectorAll('.portfolio-card')];
@@ -318,14 +313,10 @@ function showWorkflowTab(key, navigate = false) {
 }
 function configurePhoneLayout() {
   const compact=compactLayout.matches;
-  serviceRows.forEach(row=>{row.open=!compact;row.querySelector('summary').tabIndex=compact?0:-1;});
   inquiryDisclosure.open=true;calculatorDisclosure.open=!compact;
   workflowTabs.hidden=false;
   showWorkflowTab(activeWorkflow || selectedWorkflow);
 }
-serviceRows.forEach(row=>row.addEventListener('toggle',()=>{
-  if(compactLayout.matches && row.open)serviceRows.forEach(other=>{if(other!==row)other.open=false;});
-}));
 tabButtons.forEach((button,index)=>{
   button.addEventListener('click',()=>showWorkflowTab(button.dataset.workflowTab,true));
   button.addEventListener('keydown',event=>{
@@ -436,22 +427,6 @@ if (document.modelContext?.registerTool) {
 
 // Compact content explorers reuse static, search-readable examples.
 const content = window.AUTIXAI_CONTENT;
-let chosenArea = content.areas[0];
-function chooseArea(id) {
-  chosenArea = content.areas.find(area => area.id === id) || content.areas[0];
-  document.getElementById('automation-area').value = chosenArea.id;
-  document.querySelectorAll('[data-area]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.area === chosenArea.id)));
-  document.getElementById('area-title').textContent = chosenArea.title;
-  ['problem','automation','outcome'].forEach(key => { document.getElementById(`area-${key}`).textContent = chosenArea[key]; });
-  document.getElementById('area-status').textContent = `Showing ${chosenArea.title}: ${chosenArea.outcome}`;
-  window.AutixAIEvents.track('service_card_click');
-}
-document.querySelectorAll('[data-area]').forEach(button => button.addEventListener('click', () => chooseArea(button.dataset.area)));
-document.getElementById('automation-area').addEventListener('change', event => chooseArea(event.target.value));
-document.getElementById('area-inquiry').addEventListener('click', () => {
-  const field = document.getElementById('challenge');
-  if (!field.value.trim()) field.value = `I would like to explore ${chosenArea.title.toLowerCase()} for my business.`;
-});
 let chosenIndustry = content.industries[0];
 document.getElementById('industry-choice').addEventListener('change', event => {
   chosenIndustry = content.industries.find(industry => industry.id === event.target.value) || content.industries[0];
@@ -461,3 +436,94 @@ document.getElementById('industry-choice').addEventListener('change', event => {
   document.getElementById('industry-status').textContent = `Showing four ideas for ${chosenIndustry.title}.`;
 });
 document.getElementById('industry-inquiry').addEventListener('click', () => { document.getElementById('industry').value = chosenIndustry.title; });
+
+// One real set of service cards loops without cloned content or duplicate tab stops.
+(() => {
+  const carousel = document.querySelector('.service-carousel');
+  const viewport = carousel.querySelector('.service-viewport');
+  const track = carousel.querySelector('.service-track');
+  const controls = carousel.querySelector('.service-carousel-controls');
+  const pause = carousel.querySelector('[data-service-pause]');
+  const status = document.getElementById('service-motion-status');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
+  let userPaused = false, hovered = false, focused = false, touching = false, visible = false;
+  let frame = 0, lastTime = 0, position = viewport.scrollLeft, holdUntil = 0, resumeTimer = 0;
+  const motionOff = () => reduced.matches || document.documentElement.hasAttribute('data-motion-paused');
+  let cardStep = track.firstElementChild.offsetWidth + parseFloat(getComputedStyle(track).columnGap || 0);
+  const stepWidth = () => cardStep;
+  const mayRun = () => visible && !document.hidden && !userPaused && !hovered && !focused && !touching && !motionOff() && performance.now() >= holdUntil;
+
+  function stop() { cancelAnimationFrame(frame); frame = 0; lastTime = 0; }
+  function tick(now) {
+    frame = 0;
+    if (!mayRun()) { lastTime = 0; return; }
+    // Bound a resumed frame so a suspended tab cannot jump through the cards.
+    const elapsed = lastTime ? Math.min(now - lastTime, 50) : 0;
+    lastTime = now;
+    position += elapsed * 0.028;
+    const step = stepWidth();
+    if (step > 0 && position >= step) {
+      // Recycle only fully passed cards, preserving the visible position.
+      while (position >= step) { track.append(track.firstElementChild); position -= step; }
+    }
+    viewport.scrollLeft = position;
+    frame = requestAnimationFrame(tick);
+  }
+  function update() {
+    const off = motionOff();
+    pause.disabled = off;
+    pause.textContent = off ? 'Motion off' : userPaused ? 'Resume motion' : 'Pause motion';
+    pause.setAttribute('aria-pressed', String(userPaused || off));
+    const message = off ? 'Automatic scrolling is off. Swipe or use the arrow controls.' : userPaused ? 'Automatic scrolling paused. Swipe or use the arrow controls.' : 'Automatic scrolling pauses while you read, focus a card or swipe.';
+    if (status.textContent !== message) status.textContent = message;
+    if (!mayRun()) stop();
+    else if (!frame) { position = viewport.scrollLeft; lastTime = 0; frame = requestAnimationFrame(tick); }
+  }
+  function hold() {
+    holdUntil = performance.now() + 7000;
+    clearTimeout(resumeTimer); resumeTimer = setTimeout(update, 7050); update();
+  }
+  function navigate(direction) {
+    hold();
+    const end = viewport.scrollWidth - viewport.clientWidth;
+    const left = viewport.scrollLeft;
+    const target = direction > 0 ? (left >= end - 2 ? 0 : Math.min(end, left + stepWidth())) : (left <= 2 ? end : Math.max(0, left - stepWidth()));
+    viewport.scrollTo({ left: target, behavior: motionOff() ? 'instant' : 'smooth' });
+  }
+
+  controls.hidden = false;
+  pause.addEventListener('click', () => { userPaused = !userPaused; holdUntil = 0; update(); });
+  carousel.querySelector('[data-service-prev]').addEventListener('click', () => navigate(-1));
+  carousel.querySelector('[data-service-next]').addEventListener('click', () => navigate(1));
+  viewport.addEventListener('keydown', event => {
+    if (event.target !== viewport || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    event.preventDefault(); hold();
+    if (event.key === 'Home' || event.key === 'End') viewport.scrollTo({left:event.key === 'Home' ? 0 : viewport.scrollWidth,behavior:motionOff() ? 'instant' : 'smooth'});
+    else navigate(event.key === 'ArrowRight' ? 1 : -1);
+  });
+  carousel.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse' && finePointer.matches) { hovered = true; update(); } });
+  carousel.addEventListener('pointerleave', () => { hovered = false; update(); });
+  viewport.addEventListener('focusin', () => { focused = true; update(); });
+  viewport.addEventListener('focusout', () => requestAnimationFrame(() => { focused = viewport.contains(document.activeElement); update(); }));
+  viewport.addEventListener('pointerdown', () => { touching = true; update(); });
+  window.addEventListener('pointerup', () => { if (touching) { touching = false; hold(); } });
+  window.addEventListener('pointercancel', () => { touching = false; hold(); });
+  viewport.addEventListener('wheel', hold, {passive:true});
+  document.addEventListener('visibilitychange', update);
+  window.addEventListener('resize', () => { cardStep = track.firstElementChild.offsetWidth + parseFloat(getComputedStyle(track).columnGap || 0); position = viewport.scrollLeft; update(); }, {passive:true});
+  window.addEventListener('autixai:motionchange', update);
+  reduced.addEventListener('change', update);
+  const observer = new IntersectionObserver(entries => { visible = entries[0].isIntersecting; update(); }, {threshold:0.12});
+  observer.observe(viewport);
+  carousel.querySelectorAll('[data-service-link]').forEach(link => link.addEventListener('click', () => {
+    const challenge = document.getElementById('challenge');
+    if (!challenge.value.trim()) challenge.value = `I would like to explore ${link.dataset.serviceLink.toLowerCase()} for my business.`;
+    clearPreparedInquiry();
+  }));
+  window.addEventListener('pagehide', () => { stop(); clearTimeout(resumeTimer); observer.disconnect(); });
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) { observer.observe(viewport); holdUntil = 0; update(); }
+  });
+  update();
+})();
