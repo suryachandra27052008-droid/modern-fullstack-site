@@ -8,7 +8,7 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / 'dist'
 DATA = json.loads((ROOT / 'content/site-content.json').read_text(encoding='utf-8'))
-VERSION = '20261007.8'
+VERSION = '20261008.1'
 BASE = 'https://autixai-site.vercel.app'
 C = DATA['contact']
 e = lambda value: escape(str(value), quote=True)
@@ -38,10 +38,14 @@ def header(page):
     nav+='<a href="/trust/"'+(' aria-current="page"' if page=='trust' else '')+'>Trust</a>'
     return f'''<header class="site-header"><div class="container nav-inner">{brand()}<nav class="desktop-nav" aria-label="Main navigation">{nav}</nav><a href="{audit}" class="button button-small header-cta" data-intent="audit"><span class="desktop-copy">Get a Free Automation Audit</span><span class="mobile-copy">Free audit</span></a><button class="menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="mobile-nav"><span></span><span></span></button></div><nav id="mobile-nav" class="mobile-nav" aria-label="Mobile navigation" hidden>{navigation(page)}<a href="/trust/">Trust & data</a><a href="{'/?intent=demo#contact' if page else '#contact'}" data-intent="demo">Book a demo call</a></nav></header>'''
 
-def footer(page):
+def social_links():
     social=''
     for item in C.get('socials',[]):
         if urlsplit(item.get('url','')).scheme=='https': social+=f'<a href="{e(item["url"])}" target="_blank" rel="noopener noreferrer">{e(item["label"])}</a>'
+    return social
+
+def footer(page):
+    social=social_links()
     email=f'<a href="mailto:{e(C["email"])}">{e(C["email"])}</a>' if C.get('email') else ''
     return f'''<footer class="site-footer"><div class="container footer-top"><div class="footer-identity">{brand()}<p>AI automation systems for modern businesses.</p></div><nav aria-label="Footer navigation">{navigation(page)}<a href="/trust/">Trust & data</a><a href="/privacy/">Privacy Policy</a><a href="/terms/">Terms</a></nav><div class="footer-contact"><a href="tel:{e(C['phone'])}">{e(C['displayPhone'])}</a><a href="{WA}" target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>{email}{social}<a data-social-link hidden target="_blank" rel="noopener noreferrer">LinkedIn ↗</a></div></div><div class="container footer-bottom"><span>© <span id="year">2026</span> AutixAI. All rights reserved.</span><span>Built around your business.</span></div></footer>'''
 
@@ -109,13 +113,18 @@ for slug,(title,description) in TITLES.items():
         html=re.sub(rf'(<meta (?:name|property)="{key}" content=")[^"]*(")',lambda m:m[1]+e(value)+m[2],html)
     canonical=BASE+('/'+slug+'/' if slug else '/')
     html=re.sub(r'<link rel="canonical" href="[^"]+">',f'<link rel="canonical" href="{canonical}">',html)
-    html=re.sub(r'\?v=20261007\.\d+',f'?v={VERSION}',html)
+    html=re.sub(r'\?v=\d{8}\.\d+',f'?v={VERSION}',html)
     if 'site-config.js' not in html: html=html.replace('<script src="/common.js',f'<script src="/site-config.js?v={VERSION}" defer></script><script src="/common.js',1)
     html=re.sub(r'<script src="/assistant-loader.js[^\"]*"[^>]*></script>', '',html)
     html=html.replace('</body>',f'<script src="/assistant-loader.js?v={VERSION}" data-whatsapp="{C["whatsapp"]}" defer></script></body>')
     if slug: html=re.sub(r'<script src="/content-data.js[^\"]*" defer></script>', '',html)
     org={'@context':'https://schema.org','@type':'Organization','name':C['name'],'url':BASE+'/','logo':BASE+'/branding/autixai-logo-original.jpg','description':'AI automation systems for modern businesses.','contactPoint':{'@type':'ContactPoint','telephone':C['phone'],'contactType':'sales','availableLanguage':'English'}}
+    social_urls=[item['url'] for item in C.get('socials',[]) if urlsplit(item.get('url','')).scheme=='https']
+    if social_urls: org['sameAs']=social_urls
     if not slug:
+        if '<!-- content:contact-socials:start -->' not in html:
+            html=re.sub(r'(<div class="contact-links">.*?</div>)',lambda m:m[1]+'<!-- content:contact-socials:start --><!-- content:contact-socials:end -->',html,count=1,flags=re.S)
+        html=block(html,'contact-socials',f'<div class="contact-socials">{social_links()}</div>' if social_links() else '')
         html=html.replace('class="text-link" href="#contact">Get My Free Automation Audit','class="text-link" href="#contact" data-intent="audit">Get My Free Automation Audit')
         html=block(html,'services',service_section())
         html=block(html,'cases',cases())
@@ -146,7 +155,7 @@ runtime={key:DATA[key] for key in ['contact','areas','industries']}
 assistant_data={key:DATA[key] for key in ['contact','areas','industries','services','integrations','pricing','faq','assistant']}
 (DIST/'assistant-data.json').write_text(json.dumps(assistant_data,ensure_ascii=False,separators=(',',':'))+'\n',encoding='utf-8')
 assistant_module=DIST/'assistant.js'
-assistant_module.write_text(re.sub(r'\?v=20261007\.\d+',f'?v={VERSION}',assistant_module.read_text(encoding='utf-8')),encoding='utf-8')
+assistant_module.write_text(re.sub(r'\?v=\d{8}\.\d+',f'?v={VERSION}',assistant_module.read_text(encoding='utf-8')),encoding='utf-8')
 (DIST/'robots.txt').write_text(f'User-agent: *\nAllow: /\nSitemap: {BASE}/sitemap.xml\n',encoding='utf-8')
 (DIST/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join(f'<url><loc>{BASE+"/"+slug+"/" if slug else BASE+"/"}</loc></url>' for slug in TITLES)+'</urlset>\n',encoding='utf-8')
 print('Updated five pages, shared components, structured data and discovery files.')
