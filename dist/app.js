@@ -453,6 +453,43 @@ document.getElementById('industry-inquiry').addEventListener('click', () => { do
   let cardStep = track.firstElementChild.offsetWidth + parseFloat(getComputedStyle(track).columnGap || 0);
   const stepWidth = () => cardStep;
   const mayRun = () => visible && !document.hidden && !userPaused && !hovered && !focused && !touching && !motionOff() && performance.now() >= holdUntil;
+  let cardSlots = [], railWidth = 0, paintFrame = 0, hoverCard = null, pointer = {x:0,y:0};
+  const depthProperties = ['--service-yaw','--service-pitch','--service-roll','--service-lift','--service-depth','--service-scale','--shine-x','--shine-y','--shine-alpha'];
+  function measureCards() {
+    railWidth = viewport.clientWidth;
+    const inset = parseFloat(getComputedStyle(viewport).paddingLeft) || 0;
+    cardSlots = [...track.children].map(card => ({card,left:card.offsetLeft+inset,width:card.offsetWidth}));
+  }
+  function paintCards() {
+    paintFrame = 0;
+    const off = motionOff();
+    const scroll = viewport.scrollLeft;
+    for (const {card,left,width} of cardSlots) {
+      const onRail = left+width-scroll > -30 && left-scroll < railWidth+30;
+      card.classList.toggle('is-service-visible', onRail && !off);
+      if (off || !onRail) {
+        depthProperties.forEach(key => card.style.removeProperty(key));
+        card.classList.remove('is-service-front');
+        continue;
+      }
+      const relative = Math.max(-1.3,Math.min(1.3,(left+width/2-scroll-railWidth/2)/(railWidth/2)));
+      const distance = Math.abs(relative);
+      const hoverX = card === hoverCard ? pointer.x : 0;
+      const hoverY = card === hoverCard ? pointer.y : 0;
+      card.style.setProperty('--service-yaw', `${-relative*20+hoverX*7}deg`);
+      card.style.setProperty('--service-pitch', `${4+distance*2-hoverY*5}deg`);
+      card.style.setProperty('--service-roll', `${-relative*2}deg`);
+      card.style.setProperty('--service-lift', `${-12+distance*18}px`);
+      card.style.setProperty('--service-depth', `${26-distance*68}px`);
+      card.style.setProperty('--service-scale', String(1-distance*0.045));
+      card.style.setProperty('--shine-x', `${50-relative*28+hoverX*25}%`);
+      card.style.setProperty('--shine-y', `${25+hoverY*25}%`);
+      card.style.setProperty('--shine-alpha', String(0.42-distance*0.13));
+      card.classList.toggle('is-service-front', distance < 0.45);
+    }
+  }
+  function queuePaint() { if (!paintFrame) paintFrame = requestAnimationFrame(paintCards); }
+  measureCards();
 
   function stop() { cancelAnimationFrame(frame); frame = 0; lastTime = 0; }
   function tick(now) {
@@ -466,8 +503,10 @@ document.getElementById('industry-inquiry').addEventListener('click', () => { do
     if (step > 0 && position >= step) {
       // Recycle only fully passed cards, preserving the visible position.
       while (position >= step) { track.append(track.firstElementChild); position -= step; }
+      measureCards();
     }
     viewport.scrollLeft = position;
+    paintCards();
     frame = requestAnimationFrame(tick);
   }
   function update() {
@@ -477,6 +516,7 @@ document.getElementById('industry-inquiry').addEventListener('click', () => { do
     pause.setAttribute('aria-pressed', String(userPaused || off));
     const message = off ? 'Automatic scrolling is off. Swipe or use the arrow controls.' : userPaused ? 'Automatic scrolling paused. Swipe or use the arrow controls.' : 'Automatic scrolling pauses while you read, focus a card or swipe.';
     if (status.textContent !== message) status.textContent = message;
+    queuePaint();
     if (!mayRun()) stop();
     else if (!frame) { position = viewport.scrollLeft; lastTime = 0; frame = requestAnimationFrame(tick); }
   }
@@ -510,8 +550,19 @@ document.getElementById('industry-inquiry').addEventListener('click', () => { do
   window.addEventListener('pointerup', () => { if (touching) { touching = false; hold(); } });
   window.addEventListener('pointercancel', () => { touching = false; hold(); });
   viewport.addEventListener('wheel', hold, {passive:true});
+  viewport.addEventListener('scroll', () => { if (!frame) queuePaint(); }, {passive:true});
+  viewport.addEventListener('pointermove', event => {
+    if (event.pointerType !== 'mouse' || !finePointer.matches || motionOff()) return;
+    hoverCard = event.target.closest('.service-card');
+    if (hoverCard) {
+      const rect = hoverCard.getBoundingClientRect();
+      pointer = {x:Math.max(-0.5,Math.min(0.5,(event.clientX-rect.left)/rect.width-0.5)),y:Math.max(-0.5,Math.min(0.5,(event.clientY-rect.top)/rect.height-0.5))};
+    }
+    queuePaint();
+  }, {passive:true});
+  viewport.addEventListener('pointerleave', () => { hoverCard = null; queuePaint(); });
   document.addEventListener('visibilitychange', update);
-  window.addEventListener('resize', () => { cardStep = track.firstElementChild.offsetWidth + parseFloat(getComputedStyle(track).columnGap || 0); position = viewport.scrollLeft; update(); }, {passive:true});
+  window.addEventListener('resize', () => { cardStep = track.firstElementChild.offsetWidth + parseFloat(getComputedStyle(track).columnGap || 0); measureCards(); position = viewport.scrollLeft; update(); }, {passive:true});
   window.addEventListener('autixai:motionchange', update);
   reduced.addEventListener('change', update);
   const observer = new IntersectionObserver(entries => { visible = entries[0].isIntersecting; update(); }, {threshold:0.12});
@@ -521,9 +572,9 @@ document.getElementById('industry-inquiry').addEventListener('click', () => { do
     if (!challenge.value.trim()) challenge.value = `I would like to explore ${link.dataset.serviceLink.toLowerCase()} for my business.`;
     clearPreparedInquiry();
   }));
-  window.addEventListener('pagehide', () => { stop(); clearTimeout(resumeTimer); observer.disconnect(); });
+  window.addEventListener('pagehide', () => { stop(); cancelAnimationFrame(paintFrame); paintFrame = 0; clearTimeout(resumeTimer); observer.disconnect(); });
   window.addEventListener('pageshow', event => {
-    if (event.persisted) { observer.observe(viewport); holdUntil = 0; update(); }
+    if (event.persisted) { observer.observe(viewport); measureCards(); holdUntil = 0; update(); }
   });
   update();
 })();

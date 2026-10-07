@@ -36,6 +36,8 @@
       pointerCard.style.setProperty('--shine-alpha','.38');
     } else if (phone.matches) {
       for (const card of visible) {
+        // The service rail owns its continuous, position-driven 3D movement.
+        if (card.classList.contains('service-card')) continue;
         if (card.matches(':focus-within')) { reset(card); continue; }
         const rect = card.getBoundingClientRect();
         const horizontal = card.classList.contains('service-card');
@@ -52,7 +54,8 @@
   document.querySelectorAll(selector).forEach(register);
   document.addEventListener('pointermove', event => {
     if (!finePointer.matches || off() || event.pointerType !== 'mouse') return;
-    const card = event.target.closest(selector);
+    const target = event.target.closest(selector);
+    const card = target?.classList.contains('service-card') ? null : target;
     if (card !== pointerCard) { if (pointerCard) reset(pointerCard); pointerCard = card; }
     if (card) { register(card); point = {x:event.clientX,y:event.clientY}; queue(); }
   }, {passive:true});
