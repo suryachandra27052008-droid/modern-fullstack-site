@@ -1,37 +1,28 @@
 'use strict';
-// Public form delivery only. No credentials, visitor storage or automatic retries.
+// Same-origin API only. Delivery destinations and credentials stay on the server.
 (() => {
-  const fields = ['name', 'business', 'industry', 'phone', 'email', 'interest', 'challenge', 'teamSize', 'timeSpent', 'tools'];
-  function isFormSubmit(endpoint) {
-    try { const url = new URL(endpoint); return url.protocol === 'https:' && url.hostname === 'formsubmit.co' && /^\/ajax\/[^/]+$/.test(url.pathname); }
-    catch { return false; }
-  }
+  const fields = ['name','business','industry','phone','email','interest','challenge','preferredContact','teamSize','timeSpent','tools','website'];
   async function send(endpoint, values, signal) {
-    if (values.website?.trim()) throw new Error('Unable to send this enquiry. Please contact us on WhatsApp.');
+    if (endpoint !== '/api/lead') throw new Error('Invalid enquiry endpoint.');
     const payload = Object.fromEntries(fields.map(key => [key, String(values[key] || '').trim()]));
-    payload.source = 'AutixAI website';
-    payload.submittedAt = new Date().toISOString();
-    const formSubmit = isFormSubmit(endpoint);
-    if (formSubmit) {
-      payload._subject = `New AutixAI enquiry — ${payload.business.replace(/[\r\n]/g, ' ').slice(0, 80)}`;
-      payload._template = 'table';
-      payload._url = 'https://autixai-site.vercel.app/#contact';
-      payload._honey = '';
-      if (payload.email) payload._replyto = payload.email;
-    }
     const response = await fetch(endpoint, {
       method: 'POST', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
       body: JSON.stringify(payload), signal, credentials: 'omit', redirect: 'error',
       referrerPolicy: 'strict-origin-when-cross-origin'
     });
-    if (!response.ok) throw new Error('The enquiry service could not accept this request.');
-    if (formSubmit) {
-      const result = await response.json();
-      const message = String(result?.message || '');
-      if (/activat|confirm.{0,30}email|email.{0,30}confirm/i.test(message)) return {status: 'activation-required'};
-      if (result?.success !== true && result?.success !== 'true') throw new Error('The enquiry service could not confirm submission.');
+    if (response.status === 429) { const error = new Error('Too many requests. Please wait a few minutes or contact us on WhatsApp.'); error.code = 'RATE_LIMITED'; throw error; }
+    let result;
+    try { result = await response.json(); } catch { throw new Error('The enquiry service could not confirm submission.'); }
+    if (!response.ok || result?.accepted !== true || result?.status !== 'accepted' || !/^lead_[a-f0-9]{32}$/.test(result?.id || '')) {
+      const error = new Error(result?.code === 'RATE_LIMITED' || response.status === 429 ? 'Too many requests. Please wait a few minutes or contact us on WhatsApp.' : "Your enquiry couldn't be submitted right now. Please try again or contact us on WhatsApp.");
+      error.code = result?.code; error.fields = result?.errors; throw error;
     }
-    return {status: 'accepted'};
+    return result;
   }
-  window.AutixAIEnquiry = Object.freeze({send, isFormSubmit});
+  function fromAudit(values) {
+    return {name:values.name || '', business:values.business || '', industry:values.industry || '',
+      email:values.email || '', phone:values.phone || '', tools:values.tools || '', preferredContact:values.preferredContact || 'email',
+      interest:values.interest === 'Free consultation' ? 'Free consultation' : 'Custom AI automation', challenge:[values.process, values.opportunity, values.summary].filter(Boolean).join('\n\n').slice(0,1800), website:values.website || ''};
+  }
+  window.AutixAIEnquiry = Object.freeze({send, fromAudit});
 })();

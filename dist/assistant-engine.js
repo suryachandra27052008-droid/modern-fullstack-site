@@ -91,7 +91,9 @@ export function validateAudit(values) {
   const errors = {};
   for (const key of ['name','business','industry','process']) if (!String(values[key] || '').trim()) errors[key] = 'Please fill in this field.';
   const phone = String(values.phone || '').trim(), email = String(values.email || '').trim();
-  if (!phone && !email) errors.phone = 'Add a WhatsApp number or an email so we can reply.';
+  if (!email) errors.email = 'Add an email address so we can reply.';
+  if (['whatsapp','phone'].includes(values.preferredContact) && !phone) errors.phone = 'Add a phone number for your preferred contact method.';
+  if (values.preferredContact && !['email','whatsapp','phone'].includes(values.preferredContact)) errors.preferredContact = 'Choose a contact method.';
   if (phone && (!/^[+\d\s().-]{7,25}$/.test(phone) || phone.replace(/\D/g, '').length < 7)) errors.phone = 'Please enter a valid WhatsApp number.';
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Please enter a valid email address.';
   const lengths = { name: 80, business: 100, industry: 100, process: 600, tools: 200, phone: 25, email: 120, opportunity: 300, summary: 450 };

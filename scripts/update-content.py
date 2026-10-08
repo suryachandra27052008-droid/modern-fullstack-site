@@ -9,7 +9,7 @@ from policy_pages import POLICY_TITLES, business_details, render_policy_pages
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / 'dist'
 DATA = json.loads((ROOT / 'content/site-content.json').read_text(encoding='utf-8'))
-VERSION = '20261008.10'
+VERSION = '20261008.11'
 BASE = 'https://autixai-site.vercel.app'
 C = DATA['contact']
 e = lambda value: escape(str(value), quote=True)
@@ -32,12 +32,12 @@ def navigation(page):
     return ''.join(links)
 
 def header(page):
-    audit='#contact' if not page else '/?intent=audit#contact'
+    audit='#contact' if not page else '/?intent=consultation#contact'
     # Short top navigation; the complete set appears in the mobile menu and footer.
     top=[DATA['navigation'][i] for i in [0,1,3]]
     nav=''.join(f'<a href="{e(item["href"].removeprefix("/") if not page and item["href"].startswith("/#") else item["href"])}"'+(' aria-current="page"' if item['href']==f'/{page}/' else '')+f'>{e(item["label"])}</a>' for item in top)
     nav+='<a href="/trust/"'+(' aria-current="page"' if page=='trust' else '')+'>Trust</a>'
-    return f'''<header class="site-header"><div class="container nav-inner">{brand()}<nav class="desktop-nav" aria-label="Main navigation">{nav}</nav><a href="{audit}" class="button button-small header-cta cta-beam" data-intent="audit"><span class="cta-beam-inner"><span class="desktop-copy">Get a Free Automation Audit</span><span class="mobile-copy">Free audit</span></span></a><button class="menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="mobile-nav"><span></span><span></span></button></div><nav id="mobile-nav" class="mobile-nav" aria-label="Mobile navigation" hidden>{navigation(page)}<a href="/trust/">Trust & data</a><a href="{'/?intent=demo#contact' if page else '#contact'}" data-intent="demo">Book a demo call</a></nav></header>'''
+    return f'''<header class="site-header"><div class="container nav-inner">{brand()}<nav class="desktop-nav" aria-label="Main navigation">{nav}</nav><a href="{audit}" class="button button-small header-cta cta-beam" data-intent="consultation" data-booking-link><span class="cta-beam-inner" data-booking-label>Request a Free Consultation</span></a><button class="menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="mobile-nav"><span></span><span></span></button></div><nav id="mobile-nav" class="mobile-nav" aria-label="Mobile navigation" hidden>{navigation(page)}<a href="/trust/">Trust & data</a><a href="{'/?intent=consultation#contact' if page else '#contact'}" data-intent="consultation" data-booking-link>Request a Free Consultation</a></nav></header>'''
 
 def social_links():
     social=''
@@ -58,7 +58,7 @@ def service_section():
     industries=''.join(f'<option value="{e(a["id"])}">{e(a["title"])}</option>' for a in DATA['industries'])
     industry=DATA['industries'][0]
     return f'''<section id="services" class="container section"><div class="section-heading"><div><div class="eyebrow accent-text">01 / WHAT WE DO</div><h2>A smarter way<br>to get work done.</h2></div><p>Practical systems for sales, support and operations. Remove repeat work so your people can focus on customers and decisions.</p></div><div class="service-carousel" role="region" aria-roledescription="carousel" aria-label="Business automation services"><div class="service-carousel-bar"><p id="service-scroll-hint">Seven ways to take work off your plate. Swipe to explore.</p><div class="service-carousel-controls" hidden><button type="button" data-service-prev aria-label="Previous service">←</button><button type="button" data-service-pause aria-pressed="false">Pause motion</button><button type="button" data-service-next aria-label="Next service">→</button></div></div><div class="service-viewport" tabindex="0" aria-label="Scroll through seven services" aria-describedby="service-scroll-hint"><div class="services-grid service-track">{''.join(rows)}</div></div><p class="sr-only" id="service-motion-status" role="status"></p></div>
-<div class="industry-explorer"><div><h3>Built around your business.</h3><p>Choose your industry for a few practical ideas.</p><label for="industry-choice">Your industry</label><select id="industry-choice">{industries}</select></div><div class="industry-ideas"><h4 id="industry-title">Ideas for {e(industry['title'])}</h4><ul id="industry-ideas">{''.join(f'<li>{e(idea)}</li>' for idea in industry['ideas'])}</ul><a id="industry-inquiry" class="text-link" href="#contact" data-intent="audit">Discuss these ideas →</a><p id="industry-status" class="sr-only" role="status"></p></div></div><noscript><p class="input-hint">Interactive choices need JavaScript. The examples above and all service descriptions remain available.</p></noscript></section>'''
+<div class="industry-explorer"><div><h3>Built around your business.</h3><p>Choose your industry for a few practical ideas.</p><label for="industry-choice">Your industry</label><select id="industry-choice">{industries}</select></div><div class="industry-ideas"><h4 id="industry-title">Ideas for {e(industry['title'])}</h4><ul id="industry-ideas">{''.join(f'<li>{e(idea)}</li>' for idea in industry['ideas'])}</ul><a id="industry-inquiry" class="text-link" href="#contact" data-intent="consultation" data-booking-link>Request a Free Consultation</a><p id="industry-status" class="sr-only" role="status"></p></div></div><noscript><p class="input-hint">Interactive choices need JavaScript. The examples above and all service descriptions remain available.</p></noscript></section>'''
 
 def cases():
     cards=[]
@@ -124,6 +124,9 @@ for slug,(title,description) in TITLES.items():
     html=re.sub(r'<script[^>]+src="/ui-effects.js[^\"]*"[^>]*></script>', '',html)
     html=html.replace('</body>',f'<script src="/ui-effects.js?v={VERSION}" defer></script></body>')
     html=re.sub(r'(<main\b[^>]*)(>)', lambda m:m[1]+(' tabindex="-1"' if 'tabindex=' not in m[1] else '')+m[2], html, count=1)
+    for asset in ['booking', 'enquiry-delivery']:
+        html=re.sub(r'<script[^>]+src="/?'+asset+r'\.js[^\"]*"[^>]*></script>', '', html)
+        html=re.sub(r'(<script src="/?common\.js)', lambda m:f'<script src="/{asset}.js?v={VERSION}" defer></script>'+m[1], html, count=1)
     if 'site-config.js' not in html: html=html.replace('<script src="/common.js',f'<script src="/site-config.js?v={VERSION}" defer></script><script src="/common.js',1)
     html=re.sub(r'<script src="/assistant-loader.js[^\"]*"[^>]*></script>', '',html)
     html=html.replace('</body>',f'<script src="/assistant-loader.js?v={VERSION}" data-whatsapp="{C["whatsapp"]}" defer></script></body>')
@@ -134,8 +137,6 @@ for slug,(title,description) in TITLES.items():
     if C.get('email'): org['email']=C['email']
     if C.get('legalName'): org['legalName']=C['legalName']
     if not slug:
-        html=re.sub(r'<script[^>]+src="/enquiry-delivery.js[^\"]*"[^>]*></script>', '', html)
-        html=re.sub(r'(<script src="/?app\.js)', lambda m:f'<script src="/enquiry-delivery.js?v={VERSION}" defer></script>'+m[1], html, count=1)
         if '<!-- content:contact-socials:start -->' not in html:
             html=re.sub(r'(<div class="contact-links">.*?</div>)',lambda m:m[1]+'<!-- content:contact-socials:start --><!-- content:contact-socials:end -->',html,count=1,flags=re.S)
         html=block(html,'contact-socials',f'<div class="contact-socials">{social_links()}</div>' if social_links() else '')

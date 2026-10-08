@@ -199,8 +199,8 @@ formFields.forEach(input => {
 function validateField(input, showError = true) {
   input.setCustomValidity('');
   if (input.required && !input.value.trim()) input.setCustomValidity('Please complete this field.');
-  const missingContact = input.id === 'phone' && !form.elements.phone.value.trim() && !form.elements.email.value.trim();
-  if (missingContact) input.setCustomValidity('Provide a phone number OR an email. One is enough.');
+  const missingContact = input.id === 'phone' && ['whatsapp','phone'].includes(form.elements.preferredContact.value) && !input.value.trim();
+  if (missingContact) input.setCustomValidity('Add a phone number for your preferred contact method.');
   if (input.id === 'phone' && input.value.trim() && input.value.replace(/\D/g,'').length < 7) input.setCustomValidity('Enter a contact number containing at least 7 digits.');
   const valid = input.validity.valid;
   const error = document.getElementById(`${input.id}-error`);
@@ -219,9 +219,9 @@ const previewDisclosure = document.getElementById('enquiry-preview-details');
 let currentCapture = '';
 function updateSendButtons() {
   primarySend.disabled = pendingCaptures.size > 0;
-  primarySend.textContent = pendingCaptures.size ? 'Sending enquiry…' : WEBHOOK_URL ? 'Send enquiry' : 'Review WhatsApp enquiry';
+  primarySend.textContent = pendingCaptures.size ? 'Submitting…' : 'Submit Enquiry';
   directSend.disabled = pendingCaptures.size > 0 || submittedCaptures.has(currentCapture);
-  directSend.textContent = pendingCaptures.size ? 'Sending enquiry…' : 'Send enquiry';
+  directSend.textContent = pendingCaptures.size ? 'Submitting…' : 'Submit Enquiry';
 }
 async function captureLead(values) {
   const captureStatus = document.getElementById('capture-status');
@@ -242,28 +242,33 @@ async function captureLead(values) {
   pendingCaptures.add(signature);
   updateSendButtons();
   resultHeading.textContent = 'Sending your enquiry…';
-  captureStatus.textContent = 'Sending securely through FormSubmit for email delivery to AutixAI. You can also use WhatsApp.';
+  captureStatus.textContent = 'Submitting your enquiry securely. You can also use WhatsApp.';
   captureStatus.dataset.state = 'sending';
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
     const receipt = await window.AutixAIEnquiry.send(WEBHOOK_URL, values, controller.signal);
-    const needsActivation = receipt.status === 'activation-required';
-    const confirmation = needsActivation
-      ? 'Email delivery is awaiting activation by our team. Please send the WhatsApp draft or call us to make sure we receive your enquiry.'
-      : 'Your enquiry was accepted for email delivery to AutixAI. We’ll use your contact details to respond. You can also chat on WhatsApp below.';
-    if (!needsActivation) submittedCaptures.set(signature, confirmation);
+    const confirmation = 'Thank you! Your enquiry has been accepted for delivery to our team. We’ll use your preferred contact method to respond. This does not reserve a consultation time.';
+    submittedCaptures.set(signature, confirmation);
     if (currentCapture === signature) {
-      resultHeading.textContent = needsActivation ? 'Please contact us on WhatsApp for now.' : 'Enquiry submitted.';
+      resultHeading.textContent = 'Enquiry submitted.';
       captureStatus.textContent = confirmation;
-      captureStatus.dataset.state = needsActivation ? 'pending' : 'success';
-      if (!needsActivation) window.AutixAIEvents.track('contact_form_complete');
+      captureStatus.dataset.state = 'success';
+      window.AutixAIEvents.track('contact_form_complete');
     }
-  } catch {
+  } catch (error) {
     if (currentCapture === signature) {
       resultHeading.textContent = 'We couldn’t confirm your submission.';
-      captureStatus.textContent = 'Your details are still here. The request may not have reached us. Try Send enquiry again, send the draft on WhatsApp, or call us.';
+      captureStatus.textContent = ['DELIVERY_UNCERTAIN','IN_PROGRESS'].includes(error.code)
+        ? 'We could not confirm delivery. Your request may have reached us; another email has not been sent. Your details are still here—please contact us on WhatsApp or call us.'
+        : `${error.message || "Your enquiry couldn't be submitted right now. Please try again or contact us on WhatsApp."} Your details are still here.`;
       captureStatus.dataset.state = 'error';
+      for (const [key, message] of Object.entries(error.fields || {})) {
+        const input = form.elements[key];
+        if (!input || !formFields.includes(input)) continue;
+        input.setCustomValidity(String(message)); input.setAttribute('aria-invalid','true');
+        const fieldError = document.getElementById(`${input.id}-error`); fieldError.textContent = String(message); fieldError.hidden = false;
+      }
     }
   } finally {
     clearTimeout(timeout); pendingCaptures.delete(signature); updateSendButtons();
@@ -277,7 +282,7 @@ function prepareInquiry(channel = 'whatsapp') {
   currentCapture = '';
   const values = Object.fromEntries(new FormData(form));
   Object.keys(values).forEach(key => { values[key] = values[key].trim(); });
-  const message = [`Hi ${businessContact.name},`, values.interest === 'Free automation audit' ? 'I would like a free automation audit.' : `I would like to discuss: ${values.interest.toLowerCase()}.`, '', `Name: ${values.name}`, `Business: ${values.business}`, `Industry: ${values.industry}`, ...(values.phone ? [`Phone / WhatsApp: ${values.phone}`] : []), ...(values.email ? [`Email: ${values.email}`] : []), '', 'Process I want to automate:', values.challenge, '', `Current tools: ${values.tools || 'To discuss'}`, `Approximate time spent: ${values.timeSpent || 'To discuss'}`, `Team size: ${values.teamSize || 'To discuss'}`].join('\n');
+  const message = [`Hi ${businessContact.name},`, values.interest === 'Free automation audit' ? 'I would like a free automation audit.' : `I would like to discuss: ${values.interest.toLowerCase()}.`, '', `Name: ${values.name}`, `Business: ${values.business}`, `Industry: ${values.industry}`, ...(values.phone ? [`Phone / WhatsApp: ${values.phone}`] : []), ...(values.email ? [`Email: ${values.email}`] : []), `Preferred contact: ${values.preferredContact}`, '', 'Process I want to automate:', values.challenge, '', `Current tools: ${values.tools || 'To discuss'}`, `Approximate time spent: ${values.timeSpent || 'To discuss'}`, `Team size: ${values.teamSize || 'To discuss'}`].join('\n');
   preparedValues = values;
   currentCapture = JSON.stringify(values);
   window.AutixAIEvents.track('audit_request_prepared');
@@ -287,11 +292,15 @@ function prepareInquiry(channel = 'whatsapp') {
   resultHeading.textContent = 'Review your enquiry.';
   previewDisclosure.open = channel === 'whatsapp';
   delete document.getElementById('capture-status').dataset.state;
-  document.getElementById('capture-status').textContent = submittedCaptures.get(currentCapture) || (WEBHOOK_URL ? 'Preparing this WhatsApp draft does not send it. Review it, then open WhatsApp and tap Send, or choose Send enquiry for email delivery.' : 'Preparing this draft does not send it. Open WhatsApp to review and send, or call us.');
+  document.getElementById('capture-status').textContent = submittedCaptures.get(currentCapture) || 'WhatsApp opens with your enquiry as a draft. Tap Send there to contact us. Opening WhatsApp does not submit this form.';
   result.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' });
   result.focus({preventScroll:true});
   updateSendButtons();
   if (channel === 'email' && WEBHOOK_URL) captureLead(values);
+  if (channel === 'whatsapp') {
+    // Open only from this explicit submit gesture; never count a draft as a received lead.
+    window.open(document.getElementById('send-inquiry').href, '_blank', 'noopener,noreferrer');
+  }
 }
 form.addEventListener('submit', event => {
   event.preventDefault();
@@ -320,7 +329,7 @@ form.addEventListener('reset', () => {
 whatsappPrepare.hidden = !WEBHOOK_URL;
 whatsappPrepare.disabled = false;
 updateSendButtons();
-document.querySelectorAll('[data-intent]').forEach(link => link.addEventListener('click', () => { document.getElementById('interest').value = link.dataset.intent === 'demo' ? 'Book a demo call' : 'Free automation audit'; clearPreparedInquiry(); }));
+document.querySelectorAll('[data-intent]').forEach(link => link.addEventListener('click', () => { document.getElementById('interest').value = ['demo','consultation'].includes(link.dataset.intent) ? 'Free consultation' : 'Free automation audit'; clearPreparedInquiry(); }));
 let formStarted = false;
 form.addEventListener('focusin', () => { if (!formStarted) { formStarted = true; window.AutixAIEvents.track('contact_form_start'); } });
 document.querySelectorAll('.hero-visual,.contact-section').forEach(region=>{
@@ -409,13 +418,27 @@ if (location.hash === '#contact') {
   inquiryDisclosure.open = true;
   const intent = new URLSearchParams(location.search).get('intent');
   if (intent === 'audit') document.getElementById('interest').value = 'Free automation audit';
-  if (intent === 'demo') document.getElementById('interest').value = 'Book a demo call';
+  if (['demo','consultation'].includes(intent)) document.getElementById('interest').value = 'Free consultation';
   if (intent === 'quote') document.getElementById('interest').value = 'Workflow integrations';
 }
 if (location.hash === '#estimate') calculatorDisclosure.open = true;
 window.addEventListener('hashchange', () => {
   if (location.hash === '#contact') inquiryDisclosure.open = true;
   if (location.hash === '#estimate') calculatorDisclosure.open = true;
+});
+
+window.addEventListener('autixai:enquiry-prefill', event => {
+  const values = event.detail || {};
+  for (const key of ['name','business','industry','phone','email','interest','challenge','tools','preferredContact']) {
+    const field = form.elements[key];
+    if (!field || typeof values[key] !== 'string' || !values[key] || field.value.trim() && !['interest','preferredContact'].includes(key)) continue;
+    const value = values[key].slice(0, field.maxLength > 0 ? field.maxLength : 1800);
+    if (field.tagName === 'SELECT' && ![...field.options].some(option => option.value === value)) continue;
+    field.value = value;
+  }
+  clearPreparedInquiry(); inquiryDisclosure.open = true;
+  document.getElementById('contact').scrollIntoView({behavior:'instant',block:'start'});
+  form.elements.email.focus({preventScroll:true});
 });
 
 const startingPoints = {

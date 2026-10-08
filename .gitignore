@@ -4,3 +4,13 @@
 node_modules/
 __pycache__/
 *.py[cod]
+.openai/
+.sites-runtime/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+coverage/
+test-results/
+playwright-report/

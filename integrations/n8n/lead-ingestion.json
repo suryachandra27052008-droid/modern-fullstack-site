@@ -1,0 +1,111 @@
+{
+  "name": "AutixAI lead intake — CONFIGURE BEFORE ACTIVATION",
+  "active": false,
+  "nodes": [
+    {
+      "id": "webhook",
+      "name": "Authenticated lead webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "autixai-leads",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "validate",
+      "name": "Validate and minimize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const event = $input.first().json.body;\nif (!event || event.schemaVersion !== 1 || event.event !== 'lead.created' || !/^lead_[a-f0-9]{32}$/.test(event.id || '') || !Number.isFinite(Date.parse(event.createdAt))) throw new Error('Invalid lead event');\nconst f = event.fields;\nif (!f || typeof f !== 'object' || Array.isArray(f)) throw new Error('Invalid fields');\nconst limits = {name:80,email:120,business:100,industry:100,interest:100,challenge:1800,preferredContact:20,phone:25,teamSize:5,timeSpent:100,tools:200};\nconst clean = {};\nfor (const [key,max] of Object.entries(limits)) { if (typeof (f[key] ?? '') !== 'string' || (f[key] || '').length > max) throw new Error('Invalid '+key); clean[key] = (f[key] || '').trim(); }\nfor (const key of ['name','email','business','industry','interest','challenge','preferredContact']) if (!clean[key]) throw new Error('Missing '+key);\nif (!/^[^\\s@<>]+@[^\\s@<>]+\\.[^\\s@<>]+$/.test(clean.email) || !['email','whatsapp','phone'].includes(clean.preferredContact)) throw new Error('Invalid contact');\nif (['phone','whatsapp'].includes(clean.preferredContact) && !clean.phone) throw new Error('Phone required');\nreturn [{json:{schemaVersion:1,event:'lead.created',id:event.id,createdAt:event.createdAt,source:'autixai-website',fields:clean}}];"
+      }
+    },
+    {
+      "id": "record",
+      "name": "Record lead and follow-up atomically",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH input AS (SELECT $1::jsonb AS d),\nlead AS (INSERT INTO autixai_leads(id,created_at,payload) SELECT d->>'id',(d->>'createdAt')::timestamptz,d FROM input ON CONFLICT(id) DO NOTHING RETURNING id),\nnotification AS (INSERT INTO autixai_outbox(lead_id,kind) SELECT id,'team_notification' FROM lead ON CONFLICT(lead_id,kind) DO NOTHING RETURNING lead_id),\nfollowup AS (INSERT INTO autixai_followups(lead_id) SELECT id FROM lead ON CONFLICT(lead_id) DO NOTHING RETURNING lead_id)\nSELECT jsonb_build_object('status','accepted','durable',true,'id',d->>'id','followUpCreated',true,'acknowledgementSent',false) AS receipt FROM input;",
+        "options": {
+          "queryReplacement": "={{ [JSON.stringify($json)] }}"
+        }
+      }
+    },
+    {
+      "id": "respond",
+      "name": "Confirm durable acceptance",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.receipt }}",
+        "options": {
+          "responseCode": 202
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Authenticated lead webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate and minimize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and minimize": {
+      "main": [
+        [
+          {
+            "node": "Record lead and follow-up atomically",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record lead and follow-up atomically": {
+      "main": [
+        [
+          {
+            "node": "Confirm durable acceptance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  }
+}

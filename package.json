@@ -3,5 +3,9 @@
   "private": true,
   "type": "module",
   "engines": { "node": "24.x" },
-  "scripts": { "test": "node --test tests/*.test.js", "dev": "python -m http.server 4175 --bind 127.0.0.1 --directory dist" }
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "build": "node scripts/build.mjs",
+    "dev": "node --env-file-if-exists=.env.local scripts/dev.mjs"
+  }
 }

@@ -61,11 +61,11 @@ test('empty/long messages are rejected and conversations are bounded independent
   assert.equal(guide.respond('pricing').limited, true);
   assert.equal(createGuide(data).state.turns, 0);
 });
-test('audit validates either phone or email and rejects malformed or oversized inputs', () => {
+test('audit requires email, supports optional phone and rejects malformed or oversized inputs', () => {
   const base = { name:'QA Visitor',business:'Example Business',industry:'E-commerce',process:'Order processing' };
-  assert.ok(validateAudit(base).phone);
+  assert.ok(validateAudit(base).email);
   assert.deepEqual(validateAudit({ ...base, email:'qa@example.com' }), {});
-  assert.deepEqual(validateAudit({ ...base, phone:'+91 90000 00000' }), {});
+  assert.ok(validateAudit({ ...base, phone:'+91 90000 00000' }).email);
   assert.ok(validateAudit({ ...base, phone:'abcdefg' }).phone);
   assert.ok(validateAudit({ ...base, email:'not-an-email' }).email);
   assert.ok(validateAudit({ ...base, email:'qa@example.com',process:'x'.repeat(601) }).process);

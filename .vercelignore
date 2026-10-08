@@ -1,10 +1,12 @@
 .git
+.env
+.env.*
+.github
 .openai
 .sites-runtime
 README.md
 .render-runtime
 .qa
-scripts
 /branding/
-tests
+scripts/render-workflow-film.py
 docs

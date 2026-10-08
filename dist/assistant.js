@@ -1,4 +1,4 @@
-import { createGuide, validateAudit, buildAuditDraft, MAX_MESSAGE } from './assistant-engine.js?v=20261008.10';
+import { createGuide, validateAudit, buildAuditDraft, MAX_MESSAGE } from './assistant-engine.js?v=20261008.11';
 
 const node = (tag, className = '', text = '') => {
   const element = document.createElement(tag); element.className = className;
@@ -86,6 +86,7 @@ export function createAssistant({ button, data }) {
       const actions = node('div', 'ax-chips ax-result-actions');
       if (result.offerAudit || result.limited) actions.append(action('Get Free Automation Audit', openAudit, 'ax-primary'));
       if (result.offerAudit) actions.append(action('Continue Chatting', () => send('Continue chatting', 'continue')));
+      if (result.offerAudit || result.contact) actions.append(consultationLink());
       if (result.contact || result.limited) actions.append(whatsappLink('Talk on WhatsApp'));
       if (result.limited) actions.append(action('Start again', reset));
       message.append(actions);
@@ -107,6 +108,12 @@ export function createAssistant({ button, data }) {
     const link = node('a', 'ax-chip', label); link.href = `https://wa.me/${data.contact.whatsapp}${draft ? `?text=${encodeURIComponent(draft)}` : ''}`;
     link.target = '_blank'; link.rel = 'noopener noreferrer'; link.addEventListener('click', () => track('assistant_whatsapp_handoff')); return link;
   }
+  function consultationLink() {
+    const link = node('a','ax-chip'); link.setAttribute('data-booking-link','');
+    window.AutixAIBooking.configure({querySelectorAll:selector => selector === '[data-booking-link]' ? [link] : []});
+    if (!window.AutixAIBooking.resolve(window.AUTIXAI_CONFIG)) link.addEventListener('click', event => { event.preventDefault(); openAudit(); auditView.querySelector('.ax-audit-title').textContent = 'Request a free consultation.'; auditView.querySelector('form').dataset.consultation = 'true'; });
+    return link;
+  }
   function start() {
     const message = bubble(data.assistant.greeting);
     controlsFor({ question: 'industry', prompt: 'What type of business do you run?' }, message);
@@ -121,6 +128,7 @@ export function createAssistant({ button, data }) {
     const topics = node('div', 'ax-topics');
     [['Pricing','pricing'],['How it works','how it works'],['Integrations','integrations']].forEach(([label, value]) => topics.append(action(label, () => send(value), 'ax-text-button')));
     message.append(topics); thread.scrollTop = 0;
+    topics.append(consultationLink());
   }
 
   function openAudit() {
@@ -128,6 +136,8 @@ export function createAssistant({ button, data }) {
     if (!auditView.children.length) createAudit();
     const values = guide.summaries();
     const form = auditView.querySelector('form');
+    delete form.dataset.consultation;
+    auditView.querySelector('.ax-audit-title').textContent = 'Let’s find your first win.';
     // Fill untouched fields only; preserve edits when visitors return from the chat.
     const defaults = { industry: guide.state.businessType, process: data.areas.find(a => a.id === guide.state.areaId)?.title || '', tools: guide.state.tools, ...values };
     for (const [key, value] of Object.entries(defaults)) if (!form.elements[key].dataset.edited) form.elements[key].value = value;
@@ -145,7 +155,8 @@ export function createAssistant({ button, data }) {
     const fields = [
       ['name','Your name','text',80,true], ['business','Business name','text',100,true],
       ['industry','Business type','select',100,true], ['process','Process you want to automate','textarea',600,true],
-      ['tools','Current tools (optional)','text',200,false], ['phone','WhatsApp number','tel',25,false], ['email','Email address','email',120,false],
+      ['tools','Current tools (optional)','text',200,false], ['phone','Phone / WhatsApp (optional)','tel',25,false], ['email','Email address','email',120,true],
+      ['preferredContact','Preferred contact method','select',20,true],
       ['opportunity','Main automation opportunity','textarea',300,false], ['summary','Short conversation summary','textarea',450,false]
     ];
     fields.forEach(([name, label, type, max, required]) => {
@@ -156,29 +167,43 @@ export function createAssistant({ button, data }) {
       if (type !== 'textarea' && type !== 'select') field.type = type;
       if (type !== 'select') field.maxLength = max;
       if (type === 'select') {
-        const empty = node('option', '', 'Choose your business type'); empty.value = ''; field.append(empty);
-        [...data.industries.map(i => i.title), 'Other / mixed business'].forEach(text => { const option = node('option', '', text); option.value = text; field.append(option); });
+        if (name === 'preferredContact') {
+          [['email','Email'],['whatsapp','WhatsApp'],['phone','Phone call']].forEach(([value,label]) => { const option = node('option','',label); option.value = value; field.append(option); });
+        } else {
+          const empty = node('option', '', 'Choose your business type'); empty.value = ''; field.append(empty);
+          [...data.industries.map(i => i.title), 'Other / mixed business'].forEach(text => { const option = node('option', '', text); option.value = text; field.append(option); });
+        }
       }
       field.autocomplete = ({name:'name',business:'organization',phone:'tel',email:'email'})[name] || 'off';
       if (name === 'phone') field.inputMode = 'tel';
       field.setAttribute('aria-describedby', `${id}-error${['phone','email'].includes(name) ? ' ax-contact-hint' : ''}`);
       const error = node('span', 'ax-error'); error.id = `${id}-error`; error.hidden = true;
       wrap.append(title, field, error); form.append(wrap);
-      if (name === 'tools') { const hint = node('p', 'ax-field-hint', 'Add a WhatsApp number OR an email—one is enough.'); hint.id = 'ax-contact-hint'; form.append(hint); }
+      if (name === 'tools') { const hint = node('p', 'ax-field-hint', 'Email is required. Add a phone number if you prefer a phone or WhatsApp reply.'); hint.id = 'ax-contact-hint'; form.append(hint); }
       if (name === 'email') form.append(node('p', 'ax-field-hint', 'The summary includes your selected workflow, not the full chat. Edit or clear it before sharing.'));
       field.addEventListener('input', () => {
         field.dataset.edited = 'true'; field.removeAttribute('aria-invalid'); error.hidden = true;
         preview.hidden = true; handoff.removeAttribute('href');
       });
     });
-    const submit = node('button', 'ax-primary', 'Review my WhatsApp request →'); submit.type = 'submit'; form.append(submit);
-    form.append(node('p', 'ax-field-hint', 'Preparing a draft sends nothing. You decide whether to open WhatsApp and tap Send there. AutixAI uses the details you send to answer this enquiry; this does not subscribe you to marketing. Please avoid confidential records and children’s personal data.'));
+    const honeyWrap = node('div','enquiry-honeypot'); honeyWrap.setAttribute('aria-hidden','true');
+    const honey = node('input'); honey.name = 'website'; honey.tabIndex = -1; honey.autocomplete = 'off'; honey.setAttribute('aria-label','Leave this field empty'); honey.maxLength = 200; honeyWrap.append(honey); form.append(honeyWrap);
+    const submit = node('button', 'ax-primary', 'Submit Enquiry'); submit.type = 'submit'; submit.dataset.channel = 'email';
+    const whatsapp = node('button','ax-chip','Chat on WhatsApp ↗'); whatsapp.type = 'submit'; whatsapp.dataset.channel = 'whatsapp'; form.append(submit,whatsapp);
+    const status = node('p','ax-field-hint'); status.setAttribute('role','status'); status.setAttribute('aria-live','polite'); form.append(status);
+    form.append(node('p', 'ax-field-hint', 'Submit Enquiry sends the reviewed fields through our secure server and FormSubmit to our team. Chat on WhatsApp opens a draft; tap Send there. This does not reserve an appointment or subscribe you to marketing. Please avoid confidential records and children’s personal data.'));
+    if (document.getElementById('inquiry-form')) form.append(action('Continue in the website form →', () => {
+      const values = window.AutixAIEnquiry.fromAudit({...Object.fromEntries(new FormData(form)), interest:form.dataset.consultation ? 'Free consultation' : 'Custom AI automation'});
+      dialog.close(); window.dispatchEvent(new CustomEvent('autixai:enquiry-prefill', {detail:values}));
+    }, 'ax-text-button'));
     const preview = node('section', 'ax-audit-preview'); preview.hidden = true;
     const previewTitle = node('h4', '', 'Your exact WhatsApp draft'); previewTitle.tabIndex = -1;
     const text = node('pre', 'ax-draft');
     const handoff = whatsappLink('Open WhatsApp with this draft ↗'); handoff.className = 'ax-primary'; handoff.removeAttribute('href');
     preview.append(previewTitle, text, handoff, node('p', 'ax-field-hint', 'Opening WhatsApp shares this draft with WhatsApp. Review it and tap Send there to contact AutixAI.'));
-    form.addEventListener('submit', event => {
+    let pending = false;
+    const accepted = new Set();
+    form.addEventListener('submit', async event => {
       event.preventDefault(); const values = Object.fromEntries(new FormData(form)); const errors = validateAudit(values);
       form.querySelectorAll('[aria-invalid]').forEach(field => field.removeAttribute('aria-invalid'));
       form.querySelectorAll('.ax-error').forEach(error => { error.hidden = true; });
@@ -189,6 +214,19 @@ export function createAssistant({ button, data }) {
       const draft = buildAuditDraft(values); text.textContent = draft;
       handoff.href = `https://wa.me/${data.contact.whatsapp}?text=${encodeURIComponent(draft)}`; preview.hidden = false;
       previewTitle.focus(); track('audit_request_prepared');
+      if (event.submitter?.dataset.channel === 'whatsapp') { window.open(handoff.href,'_blank','noopener,noreferrer'); return; }
+      if (pending) return;
+      const payload = window.AutixAIEnquiry.fromAudit({...values, interest:form.dataset.consultation ? 'Free consultation' : 'Custom AI automation'}), signature = JSON.stringify(payload);
+      if (accepted.has(signature)) { status.textContent = 'This enquiry has already been submitted.'; return; }
+      pending = true; submit.disabled = true; submit.textContent = 'Submitting…'; status.textContent = 'Submitting your enquiry securely…';
+      const controller = new AbortController(), timeout = setTimeout(() => controller.abort(),15000);
+      try {
+        await window.AutixAIEnquiry.send('/api/lead',payload,controller.signal);
+        accepted.add(signature); status.textContent = 'Thank you! Your enquiry has been accepted for delivery to our team. We’ll use your preferred contact method to respond. A consultation time has not been reserved.';
+        track('contact_form_complete');
+      } catch (error) {
+        status.textContent = ['DELIVERY_UNCERTAIN','IN_PROGRESS'].includes(error.code) ? 'We could not confirm delivery. Another email has not been sent. Your details are still here—please contact us on WhatsApp.' : `${error.message} Your details are still here.`;
+      } finally { clearTimeout(timeout); pending = false; submit.disabled = false; submit.textContent = 'Submit Enquiry'; }
     });
     scroll.append(form, preview); auditView.append(back, scroll);
   }

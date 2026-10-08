@@ -23,10 +23,9 @@
   if (year) year.textContent = String(new Date().getFullYear());
   const settings = window.AUTIXAI_CONFIG || {};
   const httpsUrl = value => { try { const url = new URL(value); return url.protocol === 'https:' ? url.href : ''; } catch { return ''; } };
-  const webhook = httpsUrl(settings.webhookUrl) || (['localhost','127.0.0.1'].includes(location.hostname) && /^http:\/\/(localhost|127\.0\.0\.1):[0-9]+\//.test(settings.webhookUrl || '') ? settings.webhookUrl : '');
+  const webhook = settings.leadEndpoint === '/api/lead' ? '/api/lead' : '';
   window.AutixAIEndpoints = Object.freeze({webhook});
-  const calendar = httpsUrl(settings.calendarUrl);
-  if (calendar) document.querySelectorAll('[data-calendar-link]').forEach(link => { link.href = calendar; link.hidden = false; });
+  window.AutixAIBooking?.configure();
   const linkedin = httpsUrl(settings.linkedinUrl);
   const founderLink = document.getElementById('founder-linkedin');
   if (founderLink && linkedin) { founderLink.href = linkedin; founderLink.hidden = false; }
@@ -39,9 +38,8 @@
   }
   document.querySelectorAll('[data-social-link]').forEach(link => { if (linkedin) { link.href = linkedin; link.hidden = false; } });
   if (webhook) {
-    const service = new URL(webhook).hostname === 'formsubmit.co' ? 'FormSubmit for email delivery to AutixAI' : 'AutixAI’s connected enquiry service';
-    document.querySelectorAll('[data-inquiry-privacy]').forEach(text => { text.textContent = `Send enquiry shares these details with ${service}. The WhatsApp option prepares a draft here; opening WhatsApp shares it with WhatsApp, where you tap Send.`; });
-    document.querySelectorAll('[data-trust-inquiry-privacy]').forEach(text => { text.textContent = `Choosing Send enquiry submits your contact and process details to ${service} so we can respond. A confirmation means the service accepted the submission, not that an email reached the inbox. Preparing a WhatsApp draft does not send it. The website does not save form details in browser storage.`; });
+    document.querySelectorAll('[data-inquiry-privacy]').forEach(text => { text.textContent = 'Submit Enquiry sends these details to AutixAI’s secure endpoint for validation and FormSubmit email delivery to our team. Chat on WhatsApp opens a draft there; tap Send in WhatsApp to finish.'; });
+    document.querySelectorAll('[data-trust-inquiry-privacy]').forEach(text => { text.textContent = 'Submit Enquiry passes your details through our server for validation and email delivery through FormSubmit. Confirmation requires acceptance by the delivery service; it does not guarantee inbox arrival or a booked appointment. WhatsApp opens a draft that you send yourself. No form details are saved in browser storage.'; });
   }
 })();
 
@@ -59,7 +57,6 @@
     if (link.dataset.intent === 'audit') window.AutixAIEvents.track('automation_audit_click');
     if (link.tagName === 'A' && link.href.startsWith('https://wa.me/')) {
       window.AutixAIEvents.track('whatsapp_click');
-      if (link.id === 'send-inquiry') window.AutixAIEvents.track('contact_form_complete');
     }
   });
   document.querySelectorAll('[data-service]').forEach(row => row.querySelector('summary')?.addEventListener('click', () => window.AutixAIEvents.track('service_card_click')));
