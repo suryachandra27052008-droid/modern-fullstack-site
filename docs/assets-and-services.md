@@ -7,7 +7,7 @@
 | Caviar Dreams | Inactive retained original fonts; attribution records Lauren Thompson and the author's distribution page, https://www.dafont.com/caviar-dreams.font, whose note allows personal/commercial use. | Retain attribution; review conditions if modifying/redistributing. |
 | AutixAI logo | User-supplied original JPG, preserved unchanged. | Owner must hold rights; supplying a file does not independently establish copyright/trademark ownership. |
 | OG preview | Existing local brand preview; no external stock source configured. | Do not replace with unlicensed media. |
-| Workflow film | Local rendered workflow illustration, source `scripts/render-workflow-film.py`; captions/transcript included. | No fake client attribution or results. |
+| AutixAI overview video | Owner-supplied `Autix_AI_Audited_Final_v2.mp4`, 56.733 seconds, 1920×1080 at 60 fps with AAC audio. Published as `dist/media/autixai-overview-v2.mp4`; stream-copy remux with MP4 fast start preserves original audio/video. New poster and matching text alternative replace the previous 36-second workflow sample. | Demonstration screens/figures are described as illustrative. Loads only after the visitor selects Play; native controls and Escape-to-close retained. |
 | Vercel | Website hosting. No analytics package configured. Hosting request metadata is disclosed in privacy notice. | Review project logs/access/retention in the hosting account. |
 | WhatsApp | Explicit visitor-selected draft handoff; no messaging SDK or background send. | Separate WhatsApp privacy/terms apply. |
 | Instagram | Canonical external link to provided profile; no embedded feed, pixel or SDK. | Owner-provided account identity; no independent ownership claim. |

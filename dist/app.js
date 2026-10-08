@@ -462,7 +462,7 @@ filmButton.addEventListener('click', () => {
   if (!open) { video.pause(); return; }
   const source = video.querySelector('source');
   if (!source.hasAttribute('src')) { source.src = source.dataset.src; video.load(); }
-  video.play().catch(() => { document.getElementById('film-status').textContent = 'Use the video controls to play. Illustrative workflow; no live data.'; });
+  video.play().catch(() => { document.getElementById('film-status').textContent = 'Use the video controls to play the AutixAI overview.'; });
 });
 video.addEventListener('error', () => { document.getElementById('film-status').textContent = 'The video could not load. You can read the transcript below or run the interactive workflow demo.'; });
 film.addEventListener('keydown', event => {
