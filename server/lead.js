@@ -55,7 +55,7 @@ function allowedOrigin(request, env) {
 }
 
 export class DeliveryError extends Error {
-  constructor(code, uncertain = false) { super(code); this.uncertain = uncertain; }
+  constructor(code, uncertain = false, providerStatus) { super(code); this.uncertain = uncertain; this.providerStatus = providerStatus; }
 }
 export async function deliverLead(lead, env, fetcher = fetch) {
   const common = {method:'POST', redirect:'error', signal:AbortSignal.timeout(10000)};
@@ -70,7 +70,7 @@ export async function deliverLead(lead, env, fetcher = fetch) {
         _replyto:lead.fields.email, _template:'table', _url:`${SITE}/#contact`, _honey:''};
       const response = await fetcher(`https://formsubmit.co/ajax/${encodeURIComponent(email)}`, {...common,
         headers:{'Content-Type':'application/json', Accept:'application/json', Origin:SITE, Referer:`${SITE}/`}, body:JSON.stringify(payload)});
-      if (!response.ok) throw new DeliveryError('provider-http', response.status >= 500);
+      if (!response.ok) throw new DeliveryError('provider-http', response.status >= 500, response.status);
       let result;
       try { result = await response.json(); } catch { throw new DeliveryError('provider-receipt', true); }
       if (/activat|confirm.{0,30}email|email.{0,30}confirm/i.test(String(result?.message || ''))) throw new DeliveryError('activation-required');
@@ -82,7 +82,7 @@ export async function deliverLead(lead, env, fetcher = fetch) {
       try { url = new URL(env.LEAD_WEBHOOK_URL); } catch { throw new DeliveryError('unconfigured'); }
       if (url.protocol !== 'https:' || url.username || url.password || !env.LEAD_WEBHOOK_SECRET) throw new DeliveryError('unconfigured');
       const response = await fetcher(url.href, {...common, headers:{'Content-Type':'application/json', Accept:'application/json', Authorization:`Bearer ${env.LEAD_WEBHOOK_SECRET}`, 'Idempotency-Key':lead.id}, body:JSON.stringify(lead)});
-      if (!response.ok) throw new DeliveryError('webhook-http', response.status >= 500);
+      if (!response.ok) throw new DeliveryError('webhook-http', response.status >= 500, response.status);
       let receipt;
       try { receipt = await response.json(); } catch { throw new DeliveryError('webhook-receipt', true); }
       if (receipt?.status !== 'accepted' || receipt?.durable !== true || receipt?.id !== lead.id) throw new DeliveryError('webhook-receipt', true);
@@ -141,6 +141,9 @@ export function createLeadHandler({env = process.env, fetcher = fetch, store:pro
       return json(201, {accepted:true, status:'accepted', id, ...result});
     } catch (error) {
       const uncertain = !(error instanceof DeliveryError) || error.uncertain;
+      const knownCodes = new Set(['unconfigured','provider-http','provider-receipt','activation-required','provider-rejected','webhook-http','webhook-receipt','provider-unavailable']);
+      // Only fixed operational codes and HTTP status; never log payloads, contact details or provider bodies.
+      console.warn(JSON.stringify({event:'lead.delivery_failed', code:knownCodes.has(error.message) ? error.message : 'delivery-exception', uncertain, ...(Number.isInteger(error.providerStatus) ? {providerStatus:error.providerStatus} : {})}));
       try {
         if (uncertain) await receipts.settle(key, receipt.token, 'unknown');
         else await receipts.release(key, receipt.token);
