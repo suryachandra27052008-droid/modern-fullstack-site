@@ -1,4 +1,4 @@
-import { createGuide, validateAudit, buildAuditDraft, MAX_MESSAGE } from './assistant-engine.js?v=20261008.11';
+import { createGuide, validateAudit, buildAuditDraft, MAX_MESSAGE } from './assistant-engine.js?v=20261008.12';
 
 const node = (tag, className = '', text = '') => {
   const element = document.createElement(tag); element.className = className;
@@ -191,7 +191,7 @@ export function createAssistant({ button, data }) {
     const submit = node('button', 'ax-primary', 'Submit Enquiry'); submit.type = 'submit'; submit.dataset.channel = 'email';
     const whatsapp = node('button','ax-chip','Chat on WhatsApp ↗'); whatsapp.type = 'submit'; whatsapp.dataset.channel = 'whatsapp'; form.append(submit,whatsapp);
     const status = node('p','ax-field-hint'); status.setAttribute('role','status'); status.setAttribute('aria-live','polite'); form.append(status);
-    form.append(node('p', 'ax-field-hint', 'Submit Enquiry sends the reviewed fields through our secure server and FormSubmit to our team. Chat on WhatsApp opens a draft; tap Send there. This does not reserve an appointment or subscribe you to marketing. Please avoid confidential records and children’s personal data.'));
+    form.append(node('p', 'ax-field-hint', 'Submit Enquiry validates the reviewed fields on our server and sends them through FormSubmit to our team. Your browser sends them directly if FormSubmit rejects the server connection. Chat on WhatsApp opens a draft; tap Send there. This does not reserve an appointment or subscribe you to marketing. Please avoid confidential records and children’s personal data.'));
     if (document.getElementById('inquiry-form')) form.append(action('Continue in the website form →', () => {
       const values = window.AutixAIEnquiry.fromAudit({...Object.fromEntries(new FormData(form)), interest:form.dataset.consultation ? 'Free consultation' : 'Custom AI automation'});
       dialog.close(); window.dispatchEvent(new CustomEvent('autixai:enquiry-prefill', {detail:values}));
@@ -219,7 +219,7 @@ export function createAssistant({ button, data }) {
       const payload = window.AutixAIEnquiry.fromAudit({...values, interest:form.dataset.consultation ? 'Free consultation' : 'Custom AI automation'}), signature = JSON.stringify(payload);
       if (accepted.has(signature)) { status.textContent = 'This enquiry has already been submitted.'; return; }
       pending = true; submit.disabled = true; submit.textContent = 'Submitting…'; status.textContent = 'Submitting your enquiry securely…';
-      const controller = new AbortController(), timeout = setTimeout(() => controller.abort(),15000);
+      const controller = new AbortController(), timeout = setTimeout(() => controller.abort(),25000);
       try {
         await window.AutixAIEnquiry.send('/api/lead',payload,controller.signal);
         accepted.add(signature); status.textContent = 'Thank you! Your enquiry has been accepted for delivery to our team. We’ll use your preferred contact method to respond. A consultation time has not been reserved.';

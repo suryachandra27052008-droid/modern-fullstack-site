@@ -10,7 +10,7 @@ The existing `autixai-site` Vercel project serves the committed `dist/` frontend
 
 `POST /api/lead`, same-origin `application/json`, maximum 16 KiB. Required strings: `name`, `email`, `business`, `industry`, `interest`, `challenge`, `preferredContact`. Optional: `phone`, `teamSize`, `timeSpent`, `tools`, empty `website` honeypot. `preferredContact` is `email`, `phone` or `whatsapp`; the latter two require phone. Field limits and validation are in `server/lead.js`. Unknown fields, chat transcripts and caller-supplied delivery settings are discarded.
 
-The API requires an allowed Origin, validates on the server, hashes the normalized allowlisted fields using a server-only HMAC secret, and claims a receipt before delivery. The browser cannot select the destination or change subject/reply-to recipients. Responses never contain submitted fields, credentials or raw provider messages. No contact fields or provider bodies are logged by application code.
+The API requires an allowed Origin, validates on the server, hashes the normalized allowlisted fields using a server-only HMAC secret, and claims a receipt before delivery. The browser cannot select the server destination or change its subject/reply-to recipients. Normal receipts contain no submitted fields, credentials or raw provider messages. The compatibility handoff described below returns only the validated fields and fixed email metadata to the submitting browser. No contact fields or provider bodies are logged by application code; operational warnings contain fixed error codes and HTTP status only.
 
 Receipt examples:
 
@@ -18,24 +18,33 @@ Receipt examples:
 {"accepted":true,"status":"accepted","id":"lead_<32 lowercase hexadecimal characters>","delivery":"email-service","acknowledgementSent":false,"followUpCreated":false}
 ```
 
-Only that explicit successful receipt causes the frontend to show submission confirmation. HTTP 200 without the expected provider receipt is rejected. A consultation request does not reserve a slot; opening WhatsApp does not submit a lead. Inputs remain editable after failure. Network uncertainty is not automatically retried; the visitor can contact the team on WhatsApp.
+Confirmation requires either that explicit successful backend receipt or actual FormSubmit acceptance after the opt-in compatibility handoff below. HTTP 200 without the expected provider receipt is rejected. A consultation request does not reserve a slot; opening WhatsApp does not submit a lead. Inputs remain editable after failure. Network uncertainty is not automatically retried; the visitor can contact the team on WhatsApp.
 
 Status codes: 201 new accepted delivery, 200 previously accepted duplicate, 409 in progress/uncertain delivery, 422 validation/spam, 429 rate limited, 400 malformed JSON, 403 rejected origin, 413 too large, 415 wrong content type, 502 delivery failure and 503 missing/unavailable configuration. The API intentionally has no cross-origin CORS access.
 
 ## Existing email delivery
 
-Production uses the owner's already activated FormSubmit/Gmail route, now called by the server. Configure these **Production** Vercel environment variables:
+Production reuses the owner's activated FormSubmit/Gmail route. The live Vercel function's outbound requests were rejected by FormSubmit with HTTP 403 despite a successful local-server test. The server validates first and attempts delivery; an explicitly configured compatibility handoff preserves browser email delivery. Configure these **Production** Vercel environment variables:
 
 ```dotenv
 LEAD_PROVIDER=formsubmit
 LEAD_NOTIFICATION_EMAIL=<the owner's receiving inbox>
 LEAD_HASH_SECRET=<random secret of at least 32 characters>
 LEAD_RATE_LIMIT_MODE=vercel-waf
+LEAD_PUBLIC_FORM_ID=<32-hex public alias from the original activation email>
 ```
 
 Generate the HMAC secret once using `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Keep it stable; rotating it changes duplicate identifiers. Set values privately in Vercel Settings → Environment Variables, or pipe them into `vercel env add NAME production --yes`. Never put them in browser config, a command-line flag containing a secret, a GitHub commit or a screenshot. `.env.local` is ignored for local development.
 
 The server includes a stable lead reference, reviewed contact/process fields and a team follow-up instruction in the notification. FormSubmit's AJAX response confirms provider acceptance, not inbox arrival. Its AJAX route does not support the desired automatic customer acknowledgement; **customer acknowledgements, CRM records and scheduled follow-up tasks are not active in email-only mode**. Incoming enquiries remain stored in the receiving mailbox under the owner's record-handling process. No unnecessary second lead database is created.
+
+### Production compatibility handoff and its limits
+
+Only a definite HTTP 403 from the configured FormSubmit server request can return `502 BROWSER_DELIVERY_REQUIRED`. This response is **not** an accepted lead. It includes the public alias URL, lead ID, validated fields and fixed metadata. The browser checks the exact HTTPS FormSubmit alias format and makes one request to that public endpoint. It confirms only after FormSubmit returns HTTP success and JSON `success:true`/`"true"` with no activation requirement. Missing receipts, provider errors and network uncertainty never show success. Neither 422 validation errors, 429 rate limits nor unknown server outcomes trigger this handoff. Preview destinations remain disabled.
+
+The server holds a delegated enquiry as uncertain because there is no authenticated FormSubmit callback proving the browser result. Current-page success locks prevent another send; a same-payload retry on the same warm server returns 409. Contact the team before retrying an uncertain delivery. No customer acknowledgement or follow-up automation is claimed.
+
+**This is a degraded compatibility path, not end-to-end private server delivery.** The public alias is intentionally exposed to the submitting browser and its separate provider endpoint cannot enforce AutixAI's API validation/WAF. It retains the same public-form limitation as the previously working site. To remove this limitation, obtain a FormSubmit-supported server route/allowance or configure the documented authenticated durable webhook/API email destination. Then remove `LEAD_PUBLIC_FORM_ID` after a successful production server-only test. Do not spoof clients or bypass provider challenges. No new account was created.
 
 ### Rate limiting and duplicate limits
 

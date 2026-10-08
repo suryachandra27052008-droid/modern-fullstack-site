@@ -41,6 +41,25 @@ test('assistant handoff includes editable reviewed context and never the full tr
   assert.equal(result.interest,'Free consultation'); assert.equal(result.preferredContact,'email'); assert.equal(result.challenge,'Stock updates\n\nFlag low stock'); assert.equal(result.transcript,undefined);
 });
 
+test('email compatibility handoff requires a definite backend instruction and actual provider acceptance', async () => {
+  const fallback = {id:receipt.id,url:'https://formsubmit.co/ajax/'+'b'.repeat(32),payload:{name:'Reviewed visitor',leadId:receipt.id}};
+  const instruction = {accepted:false,code:'BROWSER_DELIVERY_REQUIRED',fallback};
+  let calls=[];
+  const api=delivery(async (url,options) => {calls.push({url,options}); return calls.length===1 ? {ok:false,status:502,json:async()=>instruction} : {ok:true,json:async()=>({success:true})};});
+  assert.equal((await api.send('/api/lead',{})).delivery,'browser-email-service');
+  assert.equal(calls.length,2); assert.equal(calls[1].url,fallback.url); assert.equal(calls[1].options.credentials,'omit');
+  for (const url of ['https://attacker.example/ajax/'+'b'.repeat(32),fallback.url+'?redirect=1',fallback.url+'/']) {
+    let attempts=0;
+    await assert.rejects(delivery(async()=>{attempts++;return {ok:false,status:502,json:async()=>({...instruction,fallback:{...fallback,url}})};}).send('/api/lead',{}));
+    assert.equal(attempts,1);
+  }
+  for (const provider of [{success:false},{success:true,message:'Activate your form.'},{}]) {
+    let attempts=0;
+    await assert.rejects(delivery(async()=>++attempts===1 ? {ok:false,status:502,json:async()=>instruction} : {ok:true,json:async()=>provider}).send('/api/lead',{}));
+    assert.equal(attempts,2);
+  }
+});
+
 test('booking uses a verified real event URL and falls back for absent or unsafe settings', () => {
   const window={}; vm.runInNewContext(readFileSync(new URL('../dist/booking.js',import.meta.url),'utf8'),{window,URL});
   const resolve=window.AutixAIBooking.resolve;

@@ -245,7 +245,7 @@ async function captureLead(values) {
   captureStatus.textContent = 'Submitting your enquiry securely. You can also use WhatsApp.';
   captureStatus.dataset.state = 'sending';
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 25000);
   try {
     const receipt = await window.AutixAIEnquiry.send(WEBHOOK_URL, values, controller.signal);
     const confirmation = 'Thank you! Your enquiry has been accepted for delivery to our team. We’ll use your preferred contact method to respond. This does not reserve a consultation time.';

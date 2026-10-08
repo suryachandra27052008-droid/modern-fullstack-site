@@ -121,6 +121,21 @@ test('automation webhooks require authentication and durable matching receipts',
   await assert.rejects(deliverLead(lead,{...configuration,LEAD_WEBHOOK_SECRET:''}));
 });
 
+test('public email handoff is opt-in, follows validation, requires a definite 403 and retains an uncertain hold', async () => {
+  const configuration={...env,LEAD_PUBLIC_FORM_ID:'b'.repeat(32)};
+  const handler=createLeadHandler({env:configuration,fetcher:async()=>new Response('',{status:403})});
+  assert.equal((await handler(request({...values,email:'invalid'}))).status,422);
+  const response=await handler(request()); const body=await response.json();
+  assert.equal(response.status,502); assert.equal(body.accepted,false); assert.equal(body.code,'BROWSER_DELIVERY_REQUIRED');
+  assert.equal(body.fallback.url,'https://formsubmit.co/ajax/'+'b'.repeat(32)); assert.equal(body.fallback.payload.email,values.email);
+  assert.equal(body.fallback.payload.transcript,undefined);
+  assert.equal((await handler(request())).status,409);
+  for (const [configuration,status] of [[env,403],[{...env,LEAD_PUBLIC_FORM_ID:'invalid'},403],[{...env,LEAD_PUBLIC_FORM_ID:'b'.repeat(32)},500]]) {
+    const failed=await createLeadHandler({env:configuration,fetcher:async()=>new Response('',{status})})(request());
+    assert.equal((await failed.json()).fallback,undefined);
+  }
+});
+
 test('receipt cache expires and Redis operations are atomic, bounded and contain no enquiry text', async () => {
   let now = 1000; const memory = new MemoryLeadStore(() => now);
   const first = await memory.claim('hash','lead_test'); assert.equal(first.claimed,true);

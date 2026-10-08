@@ -38,8 +38,8 @@
   }
   document.querySelectorAll('[data-social-link]').forEach(link => { if (linkedin) { link.href = linkedin; link.hidden = false; } });
   if (webhook) {
-    document.querySelectorAll('[data-inquiry-privacy]').forEach(text => { text.textContent = 'Submit Enquiry sends these details to AutixAI’s secure endpoint for validation and FormSubmit email delivery to our team. Chat on WhatsApp opens a draft there; tap Send in WhatsApp to finish.'; });
-    document.querySelectorAll('[data-trust-inquiry-privacy]').forEach(text => { text.textContent = 'Submit Enquiry passes your details through our server for validation and email delivery through FormSubmit. Confirmation requires acceptance by the delivery service; it does not guarantee inbox arrival or a booked appointment. WhatsApp opens a draft that you send yourself. No form details are saved in browser storage.'; });
+    document.querySelectorAll('[data-inquiry-privacy]').forEach(text => { text.textContent = 'Submit Enquiry validates these details on AutixAI’s server, then sends them through FormSubmit to our team. If FormSubmit rejects the server connection, your browser sends the validated details directly to FormSubmit. Chat on WhatsApp opens a draft there; tap Send to finish.'; });
+    document.querySelectorAll('[data-trust-inquiry-privacy]').forEach(text => { text.textContent = 'Submit Enquiry validates your details on our server and sends them through FormSubmit. Your browser sends the validated details directly if FormSubmit rejects the server connection. Confirmation requires acceptance by the delivery service; it does not guarantee inbox arrival or a booked appointment. WhatsApp opens a draft you send yourself. No form details are saved in browser storage.'; });
   }
 })();
 

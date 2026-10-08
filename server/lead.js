@@ -57,17 +57,20 @@ function allowedOrigin(request, env) {
 export class DeliveryError extends Error {
   constructor(code, uncertain = false, providerStatus) { super(code); this.uncertain = uncertain; this.providerStatus = providerStatus; }
 }
+function emailPayload(lead) {
+  const escapeText = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  return {...Object.fromEntries(Object.entries(lead.fields).map(([key,value]) => [key,escapeText(value)])), source:'AutixAI website', submittedAt:lead.createdAt, leadId:lead.id,
+    followUp:'Review this enquiry and create a personal follow-up. No automatic customer acknowledgement was sent.',
+    _subject:`New AutixAI enquiry — ${lead.fields.business.replace(/[\r\n]/g,' ').slice(0,80)}`,
+    _replyto:lead.fields.email, _template:'table', _url:`${SITE}/#contact`, _honey:''};
+}
 export async function deliverLead(lead, env, fetcher = fetch) {
   const common = {method:'POST', redirect:'error', signal:AbortSignal.timeout(10000)};
   try {
     if (env.LEAD_PROVIDER === 'formsubmit') {
       const email = env.LEAD_NOTIFICATION_EMAIL;
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new DeliveryError('unconfigured');
-      const escapeText = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-      const payload = {...Object.fromEntries(Object.entries(lead.fields).map(([key,value]) => [key,escapeText(value)])), source:'AutixAI website', submittedAt:lead.createdAt, leadId:lead.id,
-        followUp:'Review this enquiry and create a personal follow-up. No automatic customer acknowledgement was sent.',
-        _subject:`New AutixAI enquiry — ${lead.fields.business.replace(/[\r\n]/g,' ').slice(0,80)}`,
-        _replyto:lead.fields.email, _template:'table', _url:`${SITE}/#contact`, _honey:''};
+      const payload = emailPayload(lead);
       // Preserve the documented email-route separator while escaping unsafe path characters.
       const recipientPath = encodeURIComponent(email).replace('%40','@');
       const response = await fetcher(`https://formsubmit.co/ajax/${recipientPath}`, {...common,
@@ -137,8 +140,9 @@ export function createLeadHandler({env = process.env, fetcher = fetch, store:pro
       if (receipt.state === 'accepted') return json(200, {accepted:true, status:'accepted', id:receipt.id, duplicate:true});
       return errorResponse(409, receipt.state === 'unknown' ? 'DELIVERY_UNCERTAIN' : 'IN_PROGRESS');
     }
+    const lead = {schemaVersion:1, event:'lead.created', id, createdAt:new Date().toISOString(), source:'autixai-website', fields};
     try {
-      const result = await deliver({schemaVersion:1, event:'lead.created', id, createdAt:new Date().toISOString(), source:'autixai-website', fields}, env, fetcher);
+      const result = await deliver(lead, env, fetcher);
       await receipts.settle(key, receipt.token, 'accepted');
       return json(201, {accepted:true, status:'accepted', id, ...result});
     } catch (error) {
@@ -146,6 +150,12 @@ export function createLeadHandler({env = process.env, fetcher = fetch, store:pro
       const knownCodes = new Set(['unconfigured','provider-http','provider-receipt','activation-required','provider-rejected','webhook-http','webhook-receipt','provider-unavailable']);
       // Only fixed operational codes and HTTP status; never log payloads, contact details or provider bodies.
       console.warn(JSON.stringify({event:'lead.delivery_failed', code:knownCodes.has(error.message) ? error.message : 'delivery-exception', uncertain, ...(Number.isInteger(error.providerStatus) ? {providerStatus:error.providerStatus} : {})}));
+      if (env.LEAD_PROVIDER === 'formsubmit' && /^[a-f0-9]{32}$/.test(env.LEAD_PUBLIC_FORM_ID || '') && error instanceof DeliveryError && error.message === 'provider-http' && error.providerStatus === 403 && !uncertain) {
+        // FormSubmit rejects this deployment's server egress. Delegate once to its public browser form.
+        // The provider cannot prove that browser result back to us: retain an uncertain hold, never an accepted receipt.
+        try { await receipts.settle(key, receipt.token, 'unknown'); } catch { return errorResponse(503,'STORE_UNAVAILABLE'); }
+        return json(502, {accepted:false, code:'BROWSER_DELIVERY_REQUIRED', fallback:{id, url:`https://formsubmit.co/ajax/${env.LEAD_PUBLIC_FORM_ID}`, payload:emailPayload(lead)}});
+      }
       try {
         if (uncertain) await receipts.settle(key, receipt.token, 'unknown');
         else await receipts.release(key, receipt.token);
