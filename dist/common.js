@@ -39,8 +39,9 @@
   }
   document.querySelectorAll('[data-social-link]').forEach(link => { if (linkedin) { link.href = linkedin; link.hidden = false; } });
   if (webhook) {
-    document.querySelectorAll('[data-inquiry-privacy]').forEach(text => { text.textContent = 'Preparing creates a draft only. After reviewing it, choose WhatsApp or the separate direct send button. Direct send shares these details with AutixAI’s connected enquiry service so we can respond.'; });
-    document.querySelectorAll('[data-trust-inquiry-privacy]').forEach(text => { text.textContent = 'Preparing a draft does not send it. If you choose the separate direct send button after review, the website sends your contact and process details to our connected enquiry service so we can respond. Receipt is confirmed only after a successful response. The website does not save form details in browser storage.'; });
+    const service = new URL(webhook).hostname === 'formsubmit.co' ? 'FormSubmit for email delivery to AutixAI' : 'AutixAI’s connected enquiry service';
+    document.querySelectorAll('[data-inquiry-privacy]').forEach(text => { text.textContent = `Send enquiry shares these details with ${service}. The WhatsApp option prepares a draft here; opening WhatsApp shares it with WhatsApp, where you tap Send.`; });
+    document.querySelectorAll('[data-trust-inquiry-privacy]').forEach(text => { text.textContent = `Choosing Send enquiry submits your contact and process details to ${service} so we can respond. A confirmation means the service accepted the submission, not that an email reached the inbox. Preparing a WhatsApp draft does not send it. The website does not save form details in browser storage.`; });
   }
 })();
 

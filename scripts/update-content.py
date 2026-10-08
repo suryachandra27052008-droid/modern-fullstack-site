@@ -9,7 +9,7 @@ from policy_pages import POLICY_TITLES, business_details, render_policy_pages
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / 'dist'
 DATA = json.loads((ROOT / 'content/site-content.json').read_text(encoding='utf-8'))
-VERSION = '20261008.8'
+VERSION = '20261008.10'
 BASE = 'https://autixai-site.vercel.app'
 C = DATA['contact']
 e = lambda value: escape(str(value), quote=True)
@@ -134,6 +134,8 @@ for slug,(title,description) in TITLES.items():
     if C.get('email'): org['email']=C['email']
     if C.get('legalName'): org['legalName']=C['legalName']
     if not slug:
+        html=re.sub(r'<script[^>]+src="/enquiry-delivery.js[^\"]*"[^>]*></script>', '', html)
+        html=re.sub(r'(<script src="/?app\.js)', lambda m:f'<script src="/enquiry-delivery.js?v={VERSION}" defer></script>'+m[1], html, count=1)
         if '<!-- content:contact-socials:start -->' not in html:
             html=re.sub(r'(<div class="contact-links">.*?</div>)',lambda m:m[1]+'<!-- content:contact-socials:start --><!-- content:contact-socials:end -->',html,count=1,flags=re.S)
         html=block(html,'contact-socials',f'<div class="contact-socials">{social_links()}</div>' if social_links() else '')

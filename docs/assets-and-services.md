@@ -11,7 +11,8 @@
 | Vercel | Website hosting. No analytics package configured. Hosting request metadata is disclosed in privacy notice. | Review project logs/access/retention in the hosting account. |
 | WhatsApp | Explicit visitor-selected draft handoff; no messaging SDK or background send. | Separate WhatsApp privacy/terms apply. |
 | Instagram | Canonical external link to provided profile; no embedded feed, pixel or SDK. | Owner-provided account identity; no independent ownership claim. |
-| Optional webhook/calendar/analytics | Unconfigured/disabled. No marketing-email provider or payment checkout. | Review actual provider, data flow, fees, consent and notice before activation. |
+| FormSubmit / Gmail | Visitor-selected website enquiry submission to FormSubmit's AJAX endpoint, then email delivery to the owner's temporary Gmail inbox. No SDK, background send, marketing enrolment or visitor autoresponder. Sources: https://formsubmit.co/ajax-documentation, https://formsubmit.co/help and https://formsubmit.co/privacy.pdf. | Owner must confirm the activation email and verify inbox delivery. Provider acceptance is not proof of delivery. The public endpoint contains the receiving address; it is not a secret/API key. Provider controls and availability apply. |
+| Optional calendar/analytics | Unconfigured/disabled. No marketing-email provider or payment checkout. | Review actual provider, data flow, fees, consent and notice before activation. |
 | Integration platform names | Text-only feasibility examples, no partner badges or client logos. | No endorsement/partnership claim. |
 
-No new external runtime dependency, analytics provider, payment service or stock image was introduced by this update.
+Email enquiry delivery introduces a visitor-triggered FormSubmit request. No external runtime script/package, analytics provider, payment service or stock image was introduced.

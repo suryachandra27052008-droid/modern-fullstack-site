@@ -190,7 +190,7 @@ configureMobileCardEffects();
 
 const form = document.getElementById('inquiry-form');
 const result = document.getElementById('inquiry-result');
-const formFields = [...form.querySelectorAll('input,select,textarea')];
+const formFields = [...form.querySelectorAll('input,select,textarea')].filter(input => input.name !== 'website');
 formFields.forEach(input => {
   const error = document.createElement('span');
   error.id = `${input.id}-error`; error.className = 'field-error'; error.hidden = true;
@@ -211,54 +211,101 @@ function validateField(input, showError = true) {
 }
 form.noValidate = true;
 const pendingCaptures = new Set();
+const submittedCaptures = new Map();
+const primarySend = form.querySelector('[data-channel="email"]');
+const whatsappPrepare = form.querySelector('[data-channel="whatsapp"]');
+const resultHeading = document.getElementById('inquiry-result-heading');
+const previewDisclosure = document.getElementById('enquiry-preview-details');
 let currentCapture = '';
-function captureLead(values) {
+function updateSendButtons() {
+  primarySend.disabled = pendingCaptures.size > 0;
+  primarySend.textContent = pendingCaptures.size ? 'Sending enquiry…' : WEBHOOK_URL ? 'Send enquiry' : 'Review WhatsApp enquiry';
+  directSend.disabled = pendingCaptures.size > 0 || submittedCaptures.has(currentCapture);
+  directSend.textContent = pendingCaptures.size ? 'Sending enquiry…' : 'Send enquiry';
+}
+async function captureLead(values) {
   const captureStatus = document.getElementById('capture-status');
   if (!WEBHOOK_URL) {
-    captureStatus.textContent = 'Send the WhatsApp draft or call us to complete your inquiry.';
+    captureStatus.textContent = 'Send the WhatsApp draft or call us to complete your enquiry.';
     return;
   }
   const signature = JSON.stringify(values);
   currentCapture = signature;
-  if (pendingCaptures.has(signature)) return;
+  if (pendingCaptures.size) return;
+  if (submittedCaptures.has(signature)) {
+    resultHeading.textContent = 'Enquiry already submitted.';
+    captureStatus.textContent = submittedCaptures.get(signature);
+    captureStatus.dataset.state = 'success';
+    updateSendButtons();
+    return;
+  }
   pendingCaptures.add(signature);
-  directSend.disabled = true;
-  captureStatus.textContent = 'Sending your inquiry. You can also continue on WhatsApp or call us.';
+  updateSendButtons();
+  resultHeading.textContent = 'Sending your enquiry…';
+  captureStatus.textContent = 'Sending securely through FormSubmit for email delivery to AutixAI. You can also use WhatsApp.';
+  captureStatus.dataset.state = 'sending';
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-  fetch(WEBHOOK_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...values,source:'AutixAI website',submittedAt:new Date().toISOString()}),signal:controller.signal,keepalive:true})
-    .then(response => { if (!response.ok) throw new Error('Lead endpoint rejected the request'); if(currentCapture === signature) { captureStatus.textContent = 'Your inquiry was received. Continue on WhatsApp if you’d like to chat.'; window.AutixAIEvents.track('contact_form_complete'); } })
-    .catch(() => { if(currentCapture === signature)captureStatus.textContent = 'We couldn’t confirm receipt. Please send the WhatsApp draft or call us so we receive your inquiry.'; })
-    .finally(() => { clearTimeout(timeout); pendingCaptures.delete(signature); directSend.disabled = pendingCaptures.size > 0; });
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const receipt = await window.AutixAIEnquiry.send(WEBHOOK_URL, values, controller.signal);
+    const needsActivation = receipt.status === 'activation-required';
+    const confirmation = needsActivation
+      ? 'Email delivery is awaiting activation by our team. Please send the WhatsApp draft or call us to make sure we receive your enquiry.'
+      : 'Your enquiry was accepted for email delivery to AutixAI. We’ll use your contact details to respond. You can also chat on WhatsApp below.';
+    if (!needsActivation) submittedCaptures.set(signature, confirmation);
+    if (currentCapture === signature) {
+      resultHeading.textContent = needsActivation ? 'Please contact us on WhatsApp for now.' : 'Enquiry submitted.';
+      captureStatus.textContent = confirmation;
+      captureStatus.dataset.state = needsActivation ? 'pending' : 'success';
+      if (!needsActivation) window.AutixAIEvents.track('contact_form_complete');
+    }
+  } catch {
+    if (currentCapture === signature) {
+      resultHeading.textContent = 'We couldn’t confirm your submission.';
+      captureStatus.textContent = 'Your details are still here. The request may not have reached us. Try Send enquiry again, send the draft on WhatsApp, or call us.';
+      captureStatus.dataset.state = 'error';
+    }
+  } finally {
+    clearTimeout(timeout); pendingCaptures.delete(signature); updateSendButtons();
+  }
 }
 let preparedValues = null;
 const directSend = document.getElementById('send-direct');
 directSend.hidden = !WEBHOOK_URL;
 directSend.addEventListener('click', () => { if (preparedValues) captureLead(preparedValues); });
-function prepareInquiry() {
+function prepareInquiry(channel = 'whatsapp') {
   currentCapture = '';
   const values = Object.fromEntries(new FormData(form));
   Object.keys(values).forEach(key => { values[key] = values[key].trim(); });
   const message = [`Hi ${businessContact.name},`, values.interest === 'Free automation audit' ? 'I would like a free automation audit.' : `I would like to discuss: ${values.interest.toLowerCase()}.`, '', `Name: ${values.name}`, `Business: ${values.business}`, `Industry: ${values.industry}`, ...(values.phone ? [`Phone / WhatsApp: ${values.phone}`] : []), ...(values.email ? [`Email: ${values.email}`] : []), '', 'Process I want to automate:', values.challenge, '', `Current tools: ${values.tools || 'To discuss'}`, `Approximate time spent: ${values.timeSpent || 'To discuss'}`, `Team size: ${values.teamSize || 'To discuss'}`].join('\n');
   preparedValues = values;
+  currentCapture = JSON.stringify(values);
   window.AutixAIEvents.track('audit_request_prepared');
   document.getElementById('inquiry-preview').textContent = message;
   document.getElementById('send-inquiry').href = `https://wa.me/${businessContact.whatsapp}?text=${encodeURIComponent(message)}`;
   result.hidden = false;
-  document.getElementById('capture-status').textContent = WEBHOOK_URL ? 'Nothing has been sent yet. Open WhatsApp or choose the direct send button below after reviewing this message.' : 'Nothing has been sent yet. Open WhatsApp to review and send, or call us.';
+  resultHeading.textContent = 'Review your enquiry.';
+  previewDisclosure.open = channel === 'whatsapp';
+  delete document.getElementById('capture-status').dataset.state;
+  document.getElementById('capture-status').textContent = submittedCaptures.get(currentCapture) || (WEBHOOK_URL ? 'Preparing this WhatsApp draft does not send it. Review it, then open WhatsApp and tap Send, or choose Send enquiry for email delivery.' : 'Preparing this draft does not send it. Open WhatsApp to review and send, or call us.');
   result.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' });
+  result.focus({preventScroll:true});
+  updateSendButtons();
+  if (channel === 'email' && WEBHOOK_URL) captureLead(values);
 }
 form.addEventListener('submit', event => {
   event.preventDefault();
   const invalid = formFields.filter(input => !validateField(input));
   document.getElementById('form-error').hidden = invalid.length === 0;
   if (invalid.length) { const disclosure = invalid[0].closest('.process-context'); if (disclosure) disclosure.open = true; invalid[0].focus(); return; }
-  prepareInquiry();
+  prepareInquiry(WEBHOOK_URL && event.submitter?.dataset.channel !== 'whatsapp' ? 'email' : 'whatsapp');
 });
 function clearPreparedInquiry() {
   result.hidden = true; preparedValues = null; currentCapture = '';
   document.getElementById('send-inquiry').removeAttribute('href');
   document.getElementById('inquiry-preview').textContent = '';
+  document.getElementById('capture-status').textContent = '';
+  updateSendButtons();
 }
 form.addEventListener('input', event => {
   clearPreparedInquiry();
@@ -270,7 +317,9 @@ form.addEventListener('reset', () => {
   clearPreparedInquiry(); document.getElementById('form-error').hidden = true;
   formFields.forEach(input => { input.setCustomValidity(''); input.removeAttribute('aria-invalid'); document.getElementById(`${input.id}-error`).hidden = true; });
 });
-form.querySelector('[type="submit"]').disabled = false;
+whatsappPrepare.hidden = !WEBHOOK_URL;
+whatsappPrepare.disabled = false;
+updateSendButtons();
 document.querySelectorAll('[data-intent]').forEach(link => link.addEventListener('click', () => { document.getElementById('interest').value = link.dataset.intent === 'demo' ? 'Book a demo call' : 'Free automation audit'; clearPreparedInquiry(); }));
 let formStarted = false;
 form.addEventListener('focusin', () => { if (!formStarted) { formStarted = true; window.AutixAIEvents.track('contact_form_start'); } });

@@ -12,6 +12,7 @@ This is an implementation record, not a certification or a guarantee of legal co
 | 6 Form consent | Plain purpose and recipient notice before sharing; exact draft and explicit handoff. No mailing-list enrolment or bundled marketing consent. |
 | 7 Minimal data | Main enquiry accepts phone OR email. Workload/tools optional. Privacy requests collect one contact detail, type and optional context. No DOB/ID upload. |
 | 8 Third-party SDKs | Static site has no package dependencies, external runtime script, analytics provider, ad pixel, social embed or chat SDK. Website SDK-free assistant is local. Vercel hosting, visitor-opened WhatsApp/Instagram and optional disabled integrations disclosed. Any new provider needs its own review before activation. |
+| Email enquiry update, 8 October 2026 | Visitor-selected Send enquiry now uses FormSubmit AJAX delivery to the owner's temporary Gmail inbox; WhatsApp remains a separate draft route. Recipient and transmission notices updated on home, trust, privacy and cookies pages. No marketing enrolment, third-party script or automatic send on page load. |
 | 9 Dark patterns | No fake urgency, preselected marketing, auto-open assistant, forced analytics or auto-send. Drafts invalidate on edit and can be cleared. |
 | 10 Hidden fees | Paid scope, taxes, provider fees, usage, support and changes must be agreed before payment. No checkout/auto-billing. |
 | 11 Fake reviews | No customer-review section or fabricated testimonials found. Example project cards remain labelled illustrative. |
@@ -27,7 +28,7 @@ This is an implementation record, not a certification or a guarantee of legal co
 
 ## Owner decisions still needed
 
-- Contracting legal/trading name, business email, address/city, applicable registrations and billing/tax details.
+- Contracting legal/trading name, permanent business email, address/city, applicable registrations and billing/tax details. The owner supplied a temporary Gmail inbox for website enquiries on 8 October 2026; FormSubmit activation and actual inbox delivery still require owner verification.
 - Real paid-project cancellation, deposit, refund eligibility and processing terms.
 - Actual enquiry/project retention schedule and a person/process for requests. No universal retention deadline or response SLA has been promised.
 - Verify rights to supplied branding and substantiate any future real project claims/testimonials.
@@ -56,3 +57,11 @@ Marketing remains disabled. Do not treat an enquiry, privacy setting or sending 
 - Automated checks: `node --test tests/*.test.js` (15 tests), JavaScript syntax checks, generator idempotency, all local links/assets/anchors across eight pages and duplicate IDs passed. Main palette text pairs measured 5.57:1 or higher; this is not an exhaustive glass-background or WCAG audit.
 - Browser APIs used: navigation/reload, semantic locators, read-only DOM inspection, viewport overrides, console logs, screenshots, CDP reduced-motion emulation and network observation. Temporary emulation and tabs are cleared after QA.
 - Remaining limits: no physical iPhone/Android, Safari, screen-reader session, real provider onboarding, automatic deletion service, marketing delivery or payment/refund flow tested. These services are not configured. Outstanding owner decisions above remain necessary.
+
+## Email enquiry verification — 8 October 2026
+
+- Local preview at `http://127.0.0.1:4175/` used a temporary HTTP test service instead of FormSubmit, so sample submissions did not email anyone. Desktop 1280×900 and mobile 360×844 / 320×640: no horizontal overflow, meaningful page content, no overlay or relevant console error.
+- Required-field errors focus the first invalid input. Email-only and phone-only contacts work. WhatsApp review makes zero delivery requests, preserves exact reviewed fields and invalidates its link after edits.
+- A pending email disables email sends while leaving WhatsApp available. Accepted enquiries are not re-sent on repeated clicks in that page. HTTP failure and the 15-second timeout preserve fields and the WhatsApp draft; reset clears fields and the stale link.
+- Browser testing caught a missing delivery-script include; the generator now inserts it ahead of the form controller, with a regression check. All 20 automated tests pass, including FormSubmit JSON acceptance, activation-required responses, field allowlisting, missing/failed provider receipts and no automatic retries.
+- Actual inbox delivery still requires the owner to activate FormSubmit and confirm receipt. Local mocks and provider acceptance cannot establish that an email arrived. No real WhatsApp message was sent during QA.
