@@ -68,7 +68,9 @@ export async function deliverLead(lead, env, fetcher = fetch) {
         followUp:'Review this enquiry and create a personal follow-up. No automatic customer acknowledgement was sent.',
         _subject:`New AutixAI enquiry — ${lead.fields.business.replace(/[\r\n]/g,' ').slice(0,80)}`,
         _replyto:lead.fields.email, _template:'table', _url:`${SITE}/#contact`, _honey:''};
-      const response = await fetcher(`https://formsubmit.co/ajax/${encodeURIComponent(email)}`, {...common,
+      // Preserve the documented email-route separator while escaping unsafe path characters.
+      const recipientPath = encodeURIComponent(email).replace('%40','@');
+      const response = await fetcher(`https://formsubmit.co/ajax/${recipientPath}`, {...common,
         headers:{'Content-Type':'application/json', Accept:'application/json', Origin:SITE, Referer:`${SITE}/`}, body:JSON.stringify(payload)});
       if (!response.ok) throw new DeliveryError('provider-http', response.status >= 500, response.status);
       let result;

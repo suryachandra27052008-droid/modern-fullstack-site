@@ -96,7 +96,11 @@ test('FormSubmit validates its JSON receipt, uses fixed metadata and never claim
   const lead = {id:'lead_test',createdAt:new Date().toISOString(),fields:values}; let sent;
   const receipt = await deliverLead(lead,env,async (url,options) => {sent = {url,options}; return Response.json({success:'true',message:'The form was submitted successfully.'});});
   assert.equal(receipt.acknowledgementSent,false); assert.equal(receipt.followUpCreated,false);
-  assert.match(sent.url,/^https:\/\/formsubmit.co\/ajax\/owner%40example.com$/);
+  assert.match(sent.url,/^https:\/\/formsubmit.co\/ajax\/owner@example.com$/);
+  await deliverLead(lead,{...env,LEAD_NOTIFICATION_EMAIL:'owner+team#route@example.com'},async url => {
+    assert.equal(new URL(url).hash,''); assert.equal(new URL(url).search,'');
+    assert.match(url,/owner%2Bteam%23route@example.com$/); return Response.json({success:true});
+  });
   assert.equal(sent.options.headers.Referer,'https://autixai-site.vercel.app/');
   const payload = JSON.parse(sent.options.body); assert.equal(payload._replyto,values.email); assert.equal(payload.leadId,lead.id); assert.ok(!payload._autoresponse);
   await deliverLead({...lead,fields:{...values,challenge:'<script>unsafe</script> & text'}},env,async (url,options) => {
