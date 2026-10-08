@@ -23,6 +23,11 @@
 | Check | Result |
 | --- | --- |
 | `npm run build` | Passed all 31 tests, JS syntax and eight-page local link/asset checks. |
+| Clean checkout | Cloned committed source into a separate directory; `npm ci --ignore-scripts` and `npm run build` passed with no credentials or local metadata. |
+| Failed build gate | A temporary deliberately failing test in that clean clone returned exit code 1 from the build. Removed the probe; the clone remained unchanged. No failing build was published. |
+| GitHub | Full preserved history pushed to `main` in `suryachandra27052008-droid/modern-fullstack-site`. GitHub Actions run 37821087284 passed on implementation commit `b1a0aa6`. |
+| Vercel preview | Deployment `dpl_2fLkyrhev1wDSFoqG4uBX9g37AEv` built successfully, ran all 31 checks and discovered `api/lead` as a Node function. |
+| Deployment connection | Existing project connected to the GitHub repository; Vercel project API confirms production branch `main` and Git deployments enabled. PR preview support is enabled through this connection; a real PR has not been opened for testing. |
 | Backend acceptance/validation | Executed required fields, malformed email/JSON, content type, hostile/missing Origin, oversized request, phone preference, numeric bounds and honeypot rejection. |
 | Delivery/duplicate cases | Executed explicit provider receipt, false/missing/HTML receipts, activation-required, network uncertainty, known rejection/retry, concurrent duplicate and repeated accepted submission. |
 | Unconfigured/degraded cases | Executed missing settings, disabled preview, unavailable store and shared rate-limit rejection. No false success. |
@@ -42,6 +47,6 @@ Browser testing used the Codex in-app browser and a temporary local delivery stu
 - Current default duplicate cache is warm-instance memory only. Add existing Upstash REST credentials for shared claims/counters, or activate the documented idempotent durable automation destination. FormSubmit cannot provide an atomic exactly-once transaction with Redis.
 - Owner chose to keep existing email delivery and has no n8n/CRM/Redis account configured. n8n/Postgres credentials, transactional email/notification channel and task ownership are needed to activate the prepared workflow. Its import and actual database/worker behavior have not been executed.
 - No real booking, acknowledgement, CRM sync, database retention policy, physical-phone/Safari or screen-reader session was verified. Legal identity, founder details, testimonials and commercial terms were not changed.
-- Clean-checkout build, GitHub push/CI and automatic Vercel deployment evidence will be recorded after source publication.
+- Automatic production deployment and browser verification evidence will be recorded after the first connected Git push.
 
 See [setup and contracts](integrations.md) for exact configuration steps and remaining manual actions.
