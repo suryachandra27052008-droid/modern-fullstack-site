@@ -272,3 +272,33 @@ html[data-motion-paused] .card-3d{rotate:none!important;translate:none!important
 html[data-motion-paused] .service-card.card-3d,html[data-motion-paused] .service-card.card-3d :is(.service-card-top,h3,.service-card-link,.service-icon){transform:none!important;will-change:auto}
 @media(max-width:800px){.service-viewport{padding-top:34px;padding-bottom:40px}}
 @media(prefers-reduced-motion:reduce){.service-card.card-3d,.service-card.card-3d :is(.service-card-top,h3,.service-card-link,.service-icon){transform:none!important;will-change:auto}}
+
+/* Compact, seamlessly repeated tool strip. The second set is decorative only. */
+.integration-strip{min-width:0}.integration-strip h3{margin-bottom:14px}.integration-strip>.integration-marquee-row{display:flex;align-items:center;gap:12px;min-width:0}
+.tool-marquee{position:relative;overflow:hidden;min-width:0;flex:1;height:52px;mask-image:linear-gradient(to right,transparent,#000 28px,#000 calc(100% - 28px),transparent);-webkit-mask-image:linear-gradient(to right,transparent,#000 28px,#000 calc(100% - 28px),transparent)}
+.tool-marquee-track{display:flex;width:max-content;gap:0;animation:marquee-scroll 22s linear infinite;animation-play-state:paused;will-change:auto}
+.tool-marquee-set{display:flex;flex:0 0 auto;align-items:center;gap:12px;margin:0;padding:4px 12px 4px 0;list-style:none;height:52px}
+.tool-marquee .integration-tool{display:inline-flex;flex:none;align-items:center;gap:9px;height:44px;min-height:44px;padding:9px 14px;border:1px solid #56613240;border-radius:999px;background:#f7f4ee;color:#3b2c21;font-size:13px;white-space:nowrap}.tool-marquee .integration-tool svg{width:17px;height:17px;fill:none;stroke:#566132;stroke-width:1.5;flex:none}
+.tool-marquee.is-marquee-ready[data-inview] .tool-marquee-track{animation-play-state:running;will-change:transform}
+.tool-marquee.is-marquee-ready:is(:hover,:focus-within,[data-user-paused],[data-touch-paused],[data-ui-hidden]) .tool-marquee-track{animation-play-state:paused}
+.marquee-toggle{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;padding:0;border:1px solid #56613240;border-radius:50%;color:#4b552b;background:#f7f4ee;font-size:18px}.marquee-toggle[hidden]{display:none}.marquee-toggle:hover{border-color:#566132;background:#ede6d6}.marquee-toggle:disabled{cursor:default;opacity:.65}
+.integration-strip>p{margin-top:14px}.integration-strip>small{display:block;font-size:12px;line-height:1.7;margin-top:7px;color:#3b2c21}
+.tool-marquee:not(.is-marquee-ready){overflow-x:auto;mask-image:none;-webkit-mask-image:none}.tool-marquee:not(.is-marquee-ready) .marquee-copy{display:none}
+@keyframes marquee-scroll{0%{transform:translateX(0%)}100%{transform:translateX(-50%)}}
+
+/* Pointer-following olive lighting stays behind the card's text and controls. */
+.spotlight-card::before,.process-grid>article.spotlight-card::before{content:'';position:absolute;inset:0;width:auto;height:auto;z-index:0;border-radius:inherit;pointer-events:none;opacity:0;background:radial-gradient(280px circle at var(--mouse-x,50%) var(--mouse-y,50%),rgba(86,97,50,.22),transparent 65%);transition:opacity .22s ease}
+.spotlight-card:is(.is-spotlit,:focus-within)::before{opacity:1}
+.process-grid>article.spotlight-card>.spotlight-timeline-dot{position:absolute;top:-4px;left:0;width:7px;height:7px;border-radius:50%;background:#566132;pointer-events:none}
+@media(hover:hover) and (pointer:fine){.spotlight-card:hover::before{opacity:1}}
+
+/* The anchor is the accessible outer pill; its inner surface covers the beam. */
+.button.cta-beam{position:relative;display:inline-flex;isolation:isolate;overflow:hidden;padding:2px;border:0;border-radius:999px;background:#4b552b;color:#ede6d6;max-width:100%}
+.cta-beam::before{content:'';position:absolute;z-index:0;top:50%;left:-25%;width:150%;aspect-ratio:1;translate:0 -50%;background:conic-gradient(from 0deg,transparent 0 300deg,#ede6d6 340deg,#738048 360deg);animation:shimmer-spin 3s linear infinite;animation-play-state:paused;pointer-events:none}
+.cta-beam[data-inview]::before{animation-play-state:running}.cta-beam[data-ui-hidden]::before{animation-play-state:paused}
+.cta-beam-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;padding:17px 25px;border-radius:inherit;background:#566132;color:#ede6d6;transition:background .2s}.cta-beam:hover .cta-beam-inner{background:#4b552b}.header-cta .cta-beam-inner{min-height:42px;padding:12px 20px}
+@keyframes shimmer-spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+@media(max-width:800px){.header-cta .cta-beam-inner{min-height:40px;padding:10px 12px}.hero-actions>.cta-beam{width:100%}.integration-strip>.integration-marquee-row{gap:8px}.tool-marquee .integration-tool{font-size:12px}}
+@media(max-width:360px){.header-cta .cta-beam-inner{padding-inline:9px}}
+html[data-motion-paused] .tool-marquee{overflow-x:auto;mask-image:none;-webkit-mask-image:none}html[data-motion-paused] .tool-marquee-track{animation:none!important;transform:none!important;will-change:auto!important}html[data-motion-paused] .marquee-copy{display:none}html[data-motion-paused] .cta-beam::before{animation:none!important}html[data-motion-paused] .spotlight-card::before{opacity:0!important}
+@media(prefers-reduced-motion:reduce){.tool-marquee{overflow-x:auto;mask-image:none;-webkit-mask-image:none}.tool-marquee-track{animation:none!important;transform:none!important;will-change:auto!important}.marquee-copy{display:none}.cta-beam::before{animation:none!important}.spotlight-card::before{opacity:0!important;transition:none}}

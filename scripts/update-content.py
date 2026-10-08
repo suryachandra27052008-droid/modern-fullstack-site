@@ -9,7 +9,7 @@ from policy_pages import POLICY_TITLES, business_details, render_policy_pages
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / 'dist'
 DATA = json.loads((ROOT / 'content/site-content.json').read_text(encoding='utf-8'))
-VERSION = '20261008.6'
+VERSION = '20261008.8'
 BASE = 'https://autixai-site.vercel.app'
 C = DATA['contact']
 e = lambda value: escape(str(value), quote=True)
@@ -37,7 +37,7 @@ def header(page):
     top=[DATA['navigation'][i] for i in [0,1,3]]
     nav=''.join(f'<a href="{e(item["href"].removeprefix("/") if not page and item["href"].startswith("/#") else item["href"])}"'+(' aria-current="page"' if item['href']==f'/{page}/' else '')+f'>{e(item["label"])}</a>' for item in top)
     nav+='<a href="/trust/"'+(' aria-current="page"' if page=='trust' else '')+'>Trust</a>'
-    return f'''<header class="site-header"><div class="container nav-inner">{brand()}<nav class="desktop-nav" aria-label="Main navigation">{nav}</nav><a href="{audit}" class="button button-small header-cta" data-intent="audit"><span class="desktop-copy">Get a Free Automation Audit</span><span class="mobile-copy">Free audit</span></a><button class="menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="mobile-nav"><span></span><span></span></button></div><nav id="mobile-nav" class="mobile-nav" aria-label="Mobile navigation" hidden>{navigation(page)}<a href="/trust/">Trust & data</a><a href="{'/?intent=demo#contact' if page else '#contact'}" data-intent="demo">Book a demo call</a></nav></header>'''
+    return f'''<header class="site-header"><div class="container nav-inner">{brand()}<nav class="desktop-nav" aria-label="Main navigation">{nav}</nav><a href="{audit}" class="button button-small header-cta cta-beam" data-intent="audit"><span class="cta-beam-inner"><span class="desktop-copy">Get a Free Automation Audit</span><span class="mobile-copy">Free audit</span></span></a><button class="menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="mobile-nav"><span></span><span></span></button></div><nav id="mobile-nav" class="mobile-nav" aria-label="Mobile navigation" hidden>{navigation(page)}<a href="/trust/">Trust & data</a><a href="{'/?intent=demo#contact' if page else '#contact'}" data-intent="demo">Book a demo call</a></nav></header>'''
 
 def social_links():
     social=''
@@ -77,8 +77,9 @@ ICON_PATHS={'chat':'M4 4h16v12H9l-5 4Z','table':'M4 4h16v16H4ZM4 10h16M10 4v16',
 def integrations():
     items=[]
     for tool in DATA['integrations']:
-        items.append(f'<span class="integration-tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{ICON_PATHS[tool["type"]]}"/></svg>{e(tool["name"])}</span>')
-    return f'<div class="integration-strip"><h3>Works with the tools you already use.</h3><div>{"".join(items)}</div><p>And if your tool has an API, we can usually connect it.</p><small>Illustrative tool categories; availability depends on your APIs, plans and permissions. No official partnership is implied.</small></div>'
+        items.append(f'<li class="integration-tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{ICON_PATHS[tool["type"]]}"/></svg><span>{e(tool["name"])}</span></li>')
+    badges=''.join(items)
+    return f'''<div id="integrations" class="integration-strip"><h3 id="integrations-heading">Works with the tools you already use.</h3><div class="integration-marquee-row"><div class="tool-marquee" tabindex="0" role="region" aria-labelledby="integrations-heading" aria-describedby="marquee-help"><div class="tool-marquee-track"><ul class="tool-marquee-set" aria-label="Integration tools">{badges}</ul><ul class="tool-marquee-set marquee-copy" aria-hidden="true" inert>{badges}</ul></div></div><button type="button" class="marquee-toggle" aria-label="Pause tool marquee" aria-pressed="false" title="Pause tool marquee" hidden><span aria-hidden="true">Ⅱ</span></button></div><span id="marquee-help" class="sr-only">Pause using the round control, hover, focus this row, or touch and hold. With reduced motion, scroll horizontally to explore the tools.</span><p>And if your tool has an API, we can usually connect it.</p><small>Illustrative tool categories; availability depends on your APIs, plans and permissions. No official partnership is implied.</small></div>'''
 
 def pricing():
     cards=[]
@@ -120,6 +121,8 @@ for slug,(title,description) in TITLES.items():
     html=html.replace('</body>',f'<script type="module" src="/privacy-tools.js?v={VERSION}"></script></body>')
     html=re.sub(r'<script[^>]+src="/card-effects.js[^\"]*"[^>]*></script>', '',html)
     html=html.replace('</body>',f'<script src="/card-effects.js?v={VERSION}" defer></script></body>')
+    html=re.sub(r'<script[^>]+src="/ui-effects.js[^\"]*"[^>]*></script>', '',html)
+    html=html.replace('</body>',f'<script src="/ui-effects.js?v={VERSION}" defer></script></body>')
     html=re.sub(r'(<main\b[^>]*)(>)', lambda m:m[1]+(' tabindex="-1"' if 'tabindex=' not in m[1] else '')+m[2], html, count=1)
     if 'site-config.js' not in html: html=html.replace('<script src="/common.js',f'<script src="/site-config.js?v={VERSION}" defer></script><script src="/common.js',1)
     html=re.sub(r'<script src="/assistant-loader.js[^\"]*"[^>]*></script>', '',html)
