@@ -81,6 +81,8 @@
   video.defaultMuted = true;
   video.muted = true;
   video.src = matchMedia('(max-width: 800px)').matches ? video.dataset.mobileSrc : video.dataset.src;
-  startupTimer = setTimeout(finish, 2000);
+  // CDN delivery can take a few seconds on a fresh visit. The homepage stays
+  // usable during this window, and any interaction cancels the delayed intro.
+  startupTimer = setTimeout(finish, 8000);
   try { video.play().catch(finish); } catch { finish(); }
 })();

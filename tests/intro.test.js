@@ -107,7 +107,7 @@ test('autoplay rejection, startup delay and media error never trap a visitor', a
   assert.equal(blocked.video.paused, true);
   assert.equal(blocked.dialog.open, false);
   const slow = page();
-  slow.advance(2000);
+  slow.advance(8000);
   slow.video.dispatchEvent(new Event('playing'));
   assert.equal(slow.dialog.open, false);
   const broken = page();
@@ -116,6 +116,20 @@ test('autoplay rejection, startup delay and media error never trap a visitor', a
   broken.advance(300);
   assert.equal(broken.dialog.open, false);
   assert.equal(broken.locked, false);
+});
+
+test('normal CDN startup delay can finish loading while the homepage stays usable', () => {
+  const p = page();
+  p.advance(3000);
+  assert.equal(p.dialog.open, false);
+  assert.equal(p.locked, false);
+  p.video.dispatchEvent(new Event('playing'));
+  assert.equal(p.dialog.open, true);
+  p.advance(5000);
+  assert.equal(p.dialog.open, true);
+  p.video.dispatchEvent(new Event('ended'));
+  p.advance(300);
+  assert.equal(p.locked, false);
 });
 
 test('a stalled or never-ending intro has a bounded exit', () => {
