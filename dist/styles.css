@@ -311,3 +311,18 @@ html[data-motion-paused] .tool-marquee{overflow-x:auto;mask-image:none;-webkit-m
 .contact-booking{display:inline-flex;min-height:44px;align-items:center;margin-bottom:16px}
 @media(max-width:800px){.header-cta [data-booking-label]{max-width:130px;font-size:11px}.header-cta.cta-beam .cta-beam-inner{padding:9px 12px;min-height:44px}}
 @media(max-width:360px){.header-cta [data-booking-label]{max-width:88px;font-size:10px}.header-cta.cta-beam .cta-beam-inner{padding:8px 10px}}
+
+/* Linked-circle logo: exact artwork regions, with white blending into the page. */
+.brand{gap:12px}
+.brand-icon,.brand-wordmark{display:block;position:relative;overflow:hidden;flex-shrink:0;mix-blend-mode:multiply}
+.brand-icon{width:62px;aspect-ratio:236/156}
+.brand-wordmark{width:130px;aspect-ratio:268/66}
+.brand .brand-logo{position:absolute;display:block;max-width:none;height:auto;border-radius:0}
+.brand .brand-icon .brand-logo{width:238.983051%;left:-66.949153%;top:-109.615385%}
+.brand .brand-wordmark .brand-logo{width:210.447761%;left:-51.865672%;top:-680.30303%}
+.site-footer .brand{gap:14px}
+.site-footer .brand-icon{width:76px}
+.site-footer .brand-wordmark{width:160px}
+@media(max-width:800px){.brand{gap:8px}.brand-icon{width:48px}.brand-wordmark{width:112px}}
+@media(max-width:520px){.brand-icon{width:44px}.brand-wordmark{width:100px}}
+@media(max-width:360px){.brand{gap:6px}.brand-icon{width:40px}.brand-wordmark{width:90px}}

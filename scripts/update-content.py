@@ -9,7 +9,7 @@ from policy_pages import POLICY_TITLES, business_details, render_policy_pages
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / 'dist'
 DATA = json.loads((ROOT / 'content/site-content.json').read_text(encoding='utf-8'))
-VERSION = '20261009.1'
+VERSION = '20261011.1'
 BASE = 'https://autixai-site.vercel.app'
 C = DATA['contact']
 e = lambda value: escape(str(value), quote=True)
@@ -20,7 +20,9 @@ def block(html, key, value):
     return re.sub(pattern, lambda _: f'<!-- content:{key}:start -->\n{value}\n<!-- content:{key}:end -->', html, flags=re.S)
 
 def brand():
-    return f'<a class="brand" href="/" aria-label="AutixAI home"><img class="brand-logo" src="/branding/autixai-logo-original.jpg" width="1600" height="1600" alt=""><span class="brand-name">{e(C["name"])}</span></a>'
+    # Display two regions of the supplied image; preserve the original logo pixels.
+    image = '<img class="brand-logo" src="/branding/autixai-logo-20261011.jpg" width="564" height="610" alt="">'
+    return f'<a class="brand" href="/" aria-label="AutixAI home"><span class="brand-icon" aria-hidden="true">{image}</span><span class="brand-wordmark" aria-hidden="true">{image}</span></a>'
 
 def navigation(page):
     links=[]
@@ -111,7 +113,7 @@ for slug,(title,description) in TITLES.items():
     html=re.sub(r'<footer class="site-footer">.*?</footer>',lambda _:footer(slug),html,flags=re.S)
     html=re.sub(r'<title>.*?</title>',f'<title>{e(title)}</title>',html)
     html=re.sub(r'<link rel="icon"[^>]*>', '',html)
-    html=html.replace('</head>','<link rel="icon" href="/branding/autixai-logo-original.jpg" type="image/jpeg">\n</head>')
+    html=html.replace('</head>','<link rel="icon" href="/branding/autixai-icon-20261011.svg" type="image/svg+xml">\n</head>')
     for key,value in [('description',description),('og:title',title),('og:description',description),('twitter:title',title),('twitter:description',description),('og:url',BASE+('/'+slug+'/' if slug else '/'))]:
         html=re.sub(rf'(<meta (?:name|property)="{key}" content=")[^"]*(")',lambda m:m[1]+e(value)+m[2],html)
     canonical=BASE+('/'+slug+'/' if slug else '/')
@@ -131,7 +133,7 @@ for slug,(title,description) in TITLES.items():
     html=re.sub(r'<script src="/assistant-loader.js[^\"]*"[^>]*></script>', '',html)
     html=html.replace('</body>',f'<script src="/assistant-loader.js?v={VERSION}" data-whatsapp="{C["whatsapp"]}" defer></script></body>')
     if slug: html=re.sub(r'<script src="/content-data.js[^\"]*" defer></script>', '',html)
-    org={'@context':'https://schema.org','@type':'Organization','name':C['name'],'url':BASE+'/','logo':BASE+'/branding/autixai-logo-original.jpg','description':'AI automation systems for modern businesses.','contactPoint':{'@type':'ContactPoint','telephone':C['phone'],'contactType':'sales','availableLanguage':'English'}}
+    org={'@context':'https://schema.org','@type':'Organization','name':C['name'],'url':BASE+'/','logo':BASE+'/branding/autixai-logo-20261011.jpg','description':'AI automation systems for modern businesses.','contactPoint':{'@type':'ContactPoint','telephone':C['phone'],'contactType':'sales','availableLanguage':'English'}}
     social_urls=[item['url'] for item in C.get('socials',[]) if urlsplit(item.get('url','')).scheme=='https']
     if social_urls: org['sameAs']=social_urls
     if C.get('email'): org['email']=C['email']
