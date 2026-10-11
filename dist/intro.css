@@ -1,0 +1,12 @@
+/* The closed native dialog never blocks the website, including without JavaScript. */
+.brand-intro{position:fixed;inset:0;margin:0;padding:0;border:0;border-radius:0;width:100%;max-width:none;height:100vh;height:100dvh;max-height:none;overflow:hidden;background:#080e09;color:#ede6d6;opacity:1;transition:opacity .3s ease}
+.brand-intro::backdrop{background:#080e09}
+.brand-intro.is-leaving{opacity:0}
+.intro-video{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.intro-skip{position:absolute;z-index:1;top:max(22px,env(safe-area-inset-top));right:max(22px,env(safe-area-inset-right));min-height:48px;padding:10px 20px;border:1px solid rgba(237,230,214,.45);border-radius:999px;color:#ede6d6;background:rgba(8,14,9,.65);font-size:14px;line-height:1.4;cursor:pointer;backdrop-filter:blur(12px)}
+.intro-skip:hover{background:rgba(86,97,50,.65);border-color:#ede6d6}
+.intro-skip:focus-visible{outline:2px solid #ede6d6;outline-offset:4px}
+html[data-intro-open],html[data-intro-open] body{overflow:hidden}
+/* Keep the full wordmark inside a portrait screen while enlarging the cinematic frame. */
+@media(max-width:600px) and (orientation:portrait){.intro-video{width:175%;height:auto;aspect-ratio:16/9;top:50%;left:-37.5%;transform:translateY(-50%);object-fit:contain;mask-image:linear-gradient(to bottom,transparent,#000 12%,#000 88%,transparent)}}
+@media(prefers-reduced-motion:reduce){.brand-intro{transition:none}}
