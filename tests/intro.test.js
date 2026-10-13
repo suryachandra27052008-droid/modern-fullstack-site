@@ -5,13 +5,14 @@ import {runInNewContext} from 'node:vm';
 
 const source = readFileSync(new URL('../dist/intro.js', import.meta.url), 'utf8');
 
-function page({seen = false, reduced = false, hash = '', intent = false, saveData = false, mobile = false, blocked = false, unavailableStorage = false} = {}) {
+function page({seen = false, reduced = false, hash = '', intent = false, saveData = false, mobile = false, blocked = false, unavailableStorage = false, mergeAssets = false, brokenImage = false, frameCallbacks = false} = {}) {
   const attributes = new Map();
   const timers = new Map();
   const storage = new Map(seen ? [['autixai-intro-seen-v1', '1']] : []);
   let time = 0, id = 0, played = 0, focused = false;
   const dialog = new EventTarget();
   dialog.open = false;
+  dialog.style = {};
   dialog.classList = {add() {}};
   dialog.showModal = () => { dialog.open = true; };
   dialog.close = () => { dialog.open = false; };
@@ -21,6 +22,20 @@ function page({seen = false, reduced = false, hash = '', intent = false, saveDat
   video.pause = () => { video.paused = true; };
   video.removeAttribute = name => { if (name === 'src') video.src = ''; };
   video.load = () => {};
+  video.currentTime = 0;
+  video.getBoundingClientRect = () => ({left:0,top:0,width:1280,height:800});
+  const callbacks = new Map();
+  if (frameCallbacks) {
+    video.requestVideoFrameCallback = callback => { const token=++id; callbacks.set(token,callback); return token; };
+    video.cancelVideoFrameCallback = token => callbacks.delete(token);
+  }
+  const flights=[];
+  const image = src => ({dataset:{src},style:{},decode:() => brokenImage ? Promise.reject(new Error('Image failed')) : Promise.resolve(),
+    animate(keyframes,options) { const animation={keyframes,options,cancelled:false,cancel(){this.cancelled=true;}}; flights.push(animation); return animation; }});
+  const symbol = mergeAssets ? image('/symbol.svg') : undefined;
+  const wordmark = mergeAssets ? image('/wordmark.svg') : undefined;
+  const iconTarget = {getBoundingClientRect:() => ({left:52,top:27,width:62,height:41})};
+  const wordTarget = {getBoundingClientRect:() => ({left:126,top:31,width:130,height:32})};
   const skip = new EventTarget();
   const main = {focus() { focused = true; }};
   const document = new EventTarget();
@@ -28,17 +43,22 @@ function page({seen = false, reduced = false, hash = '', intent = false, saveDat
   document.activeElement = document.body;
   document.hidden = false;
   document.documentElement = {
+    clientWidth:1265,
+    style:{setProperty(){},removeProperty(){}},
     hasAttribute: name => attributes.has(name),
     setAttribute: (name, value) => attributes.set(name, value),
     removeAttribute: name => attributes.delete(name)
   };
-  document.getElementById = name => ({'brand-intro': dialog, 'intro-video': video, 'intro-skip': skip, main})[name];
-  document.querySelector = () => dialog.open ? dialog : null;
+  document.getElementById = name => ({'brand-intro': dialog, 'intro-video': video, 'intro-skip': skip, 'intro-symbol':symbol, 'intro-wordmark':wordmark, main})[name];
+  document.querySelector = selector => selector === 'dialog[open]' ? (dialog.open ? dialog : null) : selector.endsWith('.brand-icon') ? iconTarget : selector.endsWith('.brand-wordmark') ? wordTarget : null;
   const media = new EventTarget();
   media.matches = reduced;
   const setTimeout = (callback, delay) => { const token = ++id; timers.set(token, {callback, at: time + delay}); return token; };
+  const window = new EventTarget();
+  window.innerWidth = 1280;
   runInNewContext(source, {
-    document, window: new EventTarget(), URL, AbortController,
+    document, window, URL, AbortController,
+    getComputedStyle:() => ({objectFit:'cover'}),
     location: {href: `https://example.com/${intent ? '?intent=audit' : ''}${hash}`},
     performance: {getEntriesByType: () => []},
     navigator: {connection: {saveData}},
@@ -55,7 +75,13 @@ function page({seen = false, reduced = false, hash = '', intent = false, saveDat
       if (timer.at <= time && timers.delete(token)) timer.callback();
     }
   };
-  return {dialog, video, skip, document, storage, advance,
+  const frame = seconds => {
+    video.currentTime = seconds;
+    if (frameCallbacks) for (const [token,callback] of [...callbacks]) { callbacks.delete(token); callback(); }
+    else video.dispatchEvent(new Event('timeupdate'));
+  };
+  return {dialog, video, skip, document, window, storage, advance, frame, flights,
+    get merging() {return attributes.has('data-intro-merging');},
     get played() { return played; }, get focused() { return focused; },
     get locked() { return attributes.has('data-intro-open'); }};
 }
@@ -68,6 +94,55 @@ test('intro bypasses repeat sessions, reduced motion, deep links and data saving
     assert.equal(p.dialog.open, false);
     assert.equal(p.locked, false);
   }
+});
+
+test('decoded artwork merges once on a presented video frame and releases the modal after landing', async () => {
+  const p=page({mergeAssets:true,frameCallbacks:true});
+  await new Promise(resolve=>setImmediate(resolve));
+  p.video.dispatchEvent(new Event('playing'));
+  p.frame(8.2);
+  assert.equal(p.merging,false);
+  p.frame(8.31);
+  p.frame(8.5);
+  assert.equal(p.merging,true);
+  assert.equal(p.video.paused,true);
+  assert.equal(p.flights.length,2);
+  assert.equal(p.dialog.open,true);
+  p.advance(2300);
+  assert.equal(p.dialog.open,false);
+  assert.equal(p.locked,false);
+  assert.equal(p.merging,false);
+  assert.equal(p.focused,true);
+});
+
+test('Skip, Escape and rotation during travel cancel both moving layers and release the page', async () => {
+  for(const action of ['click','cancel','resize']) {
+    const p=page({mergeAssets:true});
+    await new Promise(resolve=>setImmediate(resolve));
+    p.video.dispatchEvent(new Event('playing'));
+    p.frame(8.4);
+    assert.equal(p.merging,true);
+    (action==='click'?p.skip:action==='cancel'?p.dialog:p.window).dispatchEvent(new Event(action,{cancelable:true}));
+    assert.equal(p.flights.every(animation=>animation.cancelled),true);
+    assert.equal(p.dialog.open,false);
+    assert.equal(p.locked,false);
+    assert.equal(p.merging,false);
+    p.frame(9);
+    assert.equal(p.flights.length,2);
+  }
+});
+
+test('an unavailable logo image retains the normal video exit without stranding the visitor', async () => {
+  const p=page({mergeAssets:true,brokenImage:true});
+  await new Promise(resolve=>setImmediate(resolve));
+  p.video.dispatchEvent(new Event('playing'));
+  p.frame(8.4);
+  assert.equal(p.merging,false);
+  assert.equal(p.flights.length,0);
+  p.video.dispatchEvent(new Event('ended'));
+  p.advance(300);
+  assert.equal(p.dialog.open,false);
+  assert.equal(p.locked,false);
 });
 
 test('muted intro uses the phone asset, opens only on actual playback, then restores the homepage', () => {
