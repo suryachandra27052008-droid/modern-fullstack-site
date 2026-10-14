@@ -57,7 +57,7 @@ function page({seen = false, reduced = false, hash = '', intent = false, saveDat
   const window = new EventTarget();
   window.innerWidth = 1280;
   runInNewContext(source, {
-    document, window, URL, AbortController,
+    document, window, URL, AbortController, Event,
     getComputedStyle:() => ({objectFit:'cover'}),
     location: {href: `https://example.com/${intent ? '?intent=audit' : ''}${hash}`},
     performance: {getEntriesByType: () => []},
@@ -81,6 +81,7 @@ function page({seen = false, reduced = false, hash = '', intent = false, saveDat
     else video.dispatchEvent(new Event('timeupdate'));
   };
   return {dialog, video, skip, document, window, storage, advance, frame, flights,
+    get preparing() {return attributes.has('data-intro-preparing');},
     get merging() {return attributes.has('data-intro-merging');},
     get played() { return played; }, get focused() { return focused; },
     get locked() { return attributes.has('data-intro-open'); }};
@@ -113,6 +114,21 @@ test('decoded artwork merges once on a presented video frame and releases the mo
   assert.equal(p.locked,false);
   assert.equal(p.merging,false);
   assert.equal(p.focused,true);
+});
+
+test('warming the covered page can be skipped without leaving it hidden or its motion suspended', () => {
+  const p=page({frameCallbacks:true});
+  let changes=0;
+  p.window.addEventListener('autixai:introchange',()=>changes++);
+  p.video.dispatchEvent(new Event('playing'));
+  p.frame(7.7);
+  assert.equal(p.preparing,true);
+  p.skip.dispatchEvent(new Event('click'));
+  p.advance(300);
+  assert.equal(p.dialog.open,false);
+  assert.equal(p.locked,false);
+  assert.equal(p.preparing,false);
+  assert.equal(changes,2);
 });
 
 test('Skip, Escape and rotation during travel cancel both moving layers and release the page', async () => {
@@ -169,10 +185,12 @@ test('Skip and Escape dismiss playback and release the page', () => {
     const p = page();
     p.video.dispatchEvent(new Event('playing'));
     (action === 'click' ? p.skip : p.dialog).dispatchEvent(new Event(action, {cancelable:true}));
+    assert.equal(p.preparing,true);
     p.advance(300);
     assert.equal(p.dialog.open, false);
     assert.equal(p.locked, false);
     assert.equal(p.video.paused, true);
+    assert.equal(p.preparing,false);
   }
 });
 

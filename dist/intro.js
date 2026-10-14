@@ -48,18 +48,26 @@
       if (dialog.open) dialog.close();
       document.documentElement.removeAttribute('data-intro-open');
       document.documentElement.removeAttribute('data-intro-merging');
+      document.documentElement.removeAttribute('data-intro-preparing');
       document.documentElement.style.removeProperty('--intro-gutter');
       if (opened) {
+        window.dispatchEvent(new Event('autixai:introchange'));
         const target = previousFocus?.isConnected && previousFocus !== document.body
           ? previousFocus : document.getElementById('main');
         target?.focus({preventScroll: true});
       }
     };
     if (opened && !merging && !motionOff()) {
+      // Early Skip/error exits reveal the actual page during the fade too.
+      document.documentElement.setAttribute('data-intro-preparing','');
       dialog.classList.add('is-leaving');
       setTimeout(close, 300);
     } else close();
   };
+
+  function preparePage() {
+    if (!finished && !document.documentElement.hasAttribute('data-intro-preparing')) document.documentElement.setAttribute('data-intro-preparing','');
+  }
 
   function sourceRect(x,y,width,height) {
     const rect = video.getBoundingClientRect();
@@ -86,6 +94,7 @@
     const wordRect = wordTarget.getBoundingClientRect();
     if (!iconRect.width || !wordRect.width) return;
     merging = true;
+    preparePage();
     clearTimeout(stallTimer);
     if (frameToken !== undefined) video.cancelVideoFrameCallback?.(frameToken);
     video.pause();
@@ -102,6 +111,7 @@
 
   const checkFrame = () => {
     if (finished || merging) return;
+    if (video.currentTime >= 7.6) preparePage();
     if (video.currentTime >= 8.3) merge();
     if (!finished && !merging && video.requestVideoFrameCallback) frameToken = video.requestVideoFrameCallback(checkFrame);
   };
@@ -118,11 +128,17 @@
     try { dialog.showModal(); } catch { finish(); return; }
     opened = true;
     document.documentElement.setAttribute('data-intro-open', '');
+    window.dispatchEvent(new Event('autixai:introchange'));
     endTimer = setTimeout(finish, 12000);
     if (video.requestVideoFrameCallback) frameToken = video.requestVideoFrameCallback(checkFrame);
   }, options);
   // Media events support old browsers without a continuous JS animation loop.
-  video.addEventListener('timeupdate', () => { if (!video.requestVideoFrameCallback && video.currentTime >= 8.3) merge(); }, options);
+  video.addEventListener('timeupdate', () => {
+    if (!video.requestVideoFrameCallback) {
+      if (video.currentTime >= 7.6) preparePage();
+      if (video.currentTime >= 8.3) merge();
+    }
+  }, options);
   video.addEventListener('ended', finish, options);
   video.addEventListener('error', finish, options);
   video.addEventListener('waiting', () => {

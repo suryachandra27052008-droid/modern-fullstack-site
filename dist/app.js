@@ -524,7 +524,7 @@ document.getElementById('industry-inquiry').addEventListener('click', () => { do
   const motionOff = () => reduced.matches || document.documentElement.hasAttribute('data-motion-paused');
   let cardStep = track.firstElementChild.offsetWidth + parseFloat(getComputedStyle(track).columnGap || 0);
   const stepWidth = () => cardStep;
-  const mayRun = () => visible && !document.hidden && !userPaused && !hovered && !focused && !touching && !motionOff() && performance.now() >= holdUntil;
+  const mayRun = () => visible && !document.hidden && !document.documentElement.hasAttribute('data-intro-open') && !userPaused && !hovered && !focused && !touching && !motionOff() && performance.now() >= holdUntil;
   let cardSlots = [], railWidth = 0, paintFrame = 0, hoverCard = null, pointer = {x:0,y:0};
   const depthProperties = ['--service-yaw','--service-pitch','--service-roll','--service-lift','--service-depth','--service-scale','--shine-x','--shine-y','--shine-alpha'];
   function measureCards() {
@@ -636,6 +636,7 @@ document.getElementById('industry-inquiry').addEventListener('click', () => { do
   document.addEventListener('visibilitychange', update);
   window.addEventListener('resize', () => { cardStep = track.firstElementChild.offsetWidth + parseFloat(getComputedStyle(track).columnGap || 0); measureCards(); position = viewport.scrollLeft; update(); }, {passive:true});
   window.addEventListener('autixai:motionchange', update);
+  window.addEventListener('autixai:introchange', update);
   reduced.addEventListener('change', update);
   const observer = new IntersectionObserver(entries => { visible = entries[0].isIntersecting; update(); }, {threshold:0.12});
   observer.observe(viewport);

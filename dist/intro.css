@@ -3,6 +3,7 @@
 .brand-intro::backdrop{background:transparent}
 .brand-intro.is-leaving{opacity:0}
 .intro-scene{position:absolute;inset:0;background:#080e09;will-change:opacity}
+.intro-film{position:absolute;inset:0;width:100%;height:100%}
 .intro-video{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
 .intro-traveller{position:fixed;display:block;visibility:hidden;pointer-events:none;max-width:none;object-fit:contain;transform-origin:0 0;backface-visibility:hidden;will-change:transform;contain:layout paint style}
 .brand-intro.is-merging .intro-traveller{visibility:visible}
@@ -15,11 +16,20 @@ html[data-intro-open],html[data-intro-open] body{overflow:hidden}
 /* Reserve the old scrollbar width in the page, without a gap in the full-screen cover. */
 html[data-intro-open] body{padding-right:var(--intro-gutter,0px)}
 /* Background decoration pauses; moving layers use transforms and opacity only. */
-html[data-intro-open] .hero-visual *,html[data-intro-open] .cta-beam::before{animation-play-state:paused!important}
+html[data-intro-open] .site-header *,html[data-intro-open] main *,html[data-intro-open] main *::before,html[data-intro-open] main *::after,html[data-intro-open] .site-footer *,html[data-intro-open] .autixai-launcher *{animation-play-state:paused!important}
+/* Skip painting the covered page, then warm it before the logo starts moving. */
+html[data-intro-open]:not([data-intro-preparing]):not([data-intro-merging]) body>:not(#brand-intro){visibility:hidden}
 html[data-intro-merging] .site-header .brand{visibility:hidden}
-html[data-intro-merging] .hero-copy{animation:intro-page-in .85s .95s cubic-bezier(.22,1,.36,1) both}
-html[data-intro-merging] .hero-visual{animation:intro-page-in .95s .65s cubic-bezier(.22,1,.36,1) both}
+html[data-intro-merging] .hero-copy{animation:intro-page-in .85s .95s cubic-bezier(.22,1,.36,1) both;animation-play-state:running!important}
+html[data-intro-merging] .hero-visual{animation:intro-page-in .95s .65s cubic-bezier(.22,1,.36,1) both;animation-play-state:running!important}
 @keyframes intro-page-in{from{opacity:0;transform:translate3d(0,12px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
 /* Keep the full wordmark inside a portrait screen while enlarging the cinematic frame. */
-@media(max-width:600px) and (orientation:portrait){.intro-video{width:175%;height:auto;aspect-ratio:16/9;top:50%;left:-37.5%;transform:translateY(-50%);object-fit:contain;mask-image:linear-gradient(to bottom,transparent,#000 12%,#000 88%,transparent)}}
+@media(max-width:600px) and (orientation:portrait){
+  .intro-film{inset:50% auto auto -37.5%;width:175%;height:auto;aspect-ratio:16/9;transform:translateY(-50%)}
+  .intro-video{object-fit:contain}
+  /* Static edge shades replace a mask composited over every decoded video frame. */
+  .intro-film::before,.intro-film::after{content:'';position:absolute;z-index:1;left:0;right:0;height:12%;pointer-events:none}
+  .intro-film::before{top:0;background:linear-gradient(to bottom,#080e09,transparent)}
+  .intro-film::after{bottom:0;background:linear-gradient(to top,#080e09,transparent)}
+}
 @media(prefers-reduced-motion:reduce){.brand-intro,.intro-scene,.intro-video{transition:none}html[data-intro-merging] .hero-copy,html[data-intro-merging] .hero-visual{animation:none}}
