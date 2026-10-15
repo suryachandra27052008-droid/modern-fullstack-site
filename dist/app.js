@@ -441,18 +441,6 @@ window.addEventListener('autixai:enquiry-prefill', event => {
   form.elements.email.focus({preventScroll:true});
 });
 
-const startingPoints = {
-  discover: {advice:'Start with discovery: map the work, compare effort and value, and choose one useful workflow.', interest:'Find automation opportunities'},
-  build: {advice:'Start with a scoped build: check the tools, data, review points, and acceptance criteria before connecting anything.', interest:'Workflow integrations'},
-  improve: {advice:'Start with a workflow review: trace failures, compare the workload baseline, and agree the changes worth making.', interest:'Custom AI automation'}
-};
-const startPoint = document.getElementById('start-point');
-startPoint.addEventListener('change', () => { document.getElementById('start-advice').textContent = startingPoints[startPoint.value].advice; });
-document.getElementById('start-inquiry').addEventListener('click', () => {
-  document.getElementById('interest').value = startingPoints[startPoint.value].interest;
-  result.hidden = true;
-});
-
 const filmButton = document.getElementById('watch-film');
 const film = document.getElementById('workflow-film');
 const video = document.getElementById('demo-video');

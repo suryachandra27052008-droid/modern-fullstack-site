@@ -9,7 +9,7 @@ from policy_pages import POLICY_TITLES, business_details, render_policy_pages
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / 'dist'
 DATA = json.loads((ROOT / 'content/site-content.json').read_text(encoding='utf-8'))
-VERSION = '20261014.1'
+VERSION = '20261016.1'
 BASE = 'https://autixai-site.vercel.app'
 C = DATA['contact']
 e = lambda value: escape(str(value), quote=True)
@@ -36,7 +36,7 @@ def navigation(page):
 def header(page):
     audit='#contact' if not page else '/?intent=consultation#contact'
     # Short top navigation; the complete set appears in the mobile menu and footer.
-    top=[DATA['navigation'][i] for i in [0,1,3]]
+    top=[item for item in DATA['navigation'] if item['href'] in ['/#services', '/pricing/']]
     nav=''.join(f'<a href="{e(item["href"].removeprefix("/") if not page and item["href"].startswith("/#") else item["href"])}"'+(' aria-current="page"' if item['href']==f'/{page}/' else '')+f'>{e(item["label"])}</a>' for item in top)
     nav+='<a href="/trust/"'+(' aria-current="page"' if page=='trust' else '')+'>Trust</a>'
     return f'''<header class="site-header"><div class="container nav-inner">{brand()}<nav class="desktop-nav" aria-label="Main navigation">{nav}</nav><a href="{audit}" class="button button-small header-cta cta-beam" data-intent="consultation" data-booking-link><span class="cta-beam-inner" data-booking-label>Request a Free Consultation</span></a><button class="menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="mobile-nav"><span></span><span></span></button></div><nav id="mobile-nav" class="mobile-nav" aria-label="Mobile navigation" hidden>{navigation(page)}<a href="/trust/">Trust & data</a><a href="{'/?intent=consultation#contact' if page else '#contact'}" data-intent="consultation" data-booking-link>Request a Free Consultation</a></nav></header>'''
