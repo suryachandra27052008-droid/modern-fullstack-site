@@ -1,4 +1,4 @@
-import { CONSENT_KEY, readConsent, makeConsent, allowsAnalytics, validatePrivacyRequest, buildPrivacyDraft } from './privacy-core.js?v=20261016.2';
+import { CONSENT_KEY, readConsent, makeConsent, allowsAnalytics, validatePrivacyRequest, buildPrivacyDraft } from './privacy-core.js?v=20261016.3';
 
 const optionalEnabled = window.AUTIXAI_CONFIG?.analyticsEnabled === true;
 let choice = null;

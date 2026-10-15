@@ -9,7 +9,7 @@ from policy_pages import POLICY_TITLES, business_details, render_policy_pages
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / 'dist'
 DATA = json.loads((ROOT / 'content/site-content.json').read_text(encoding='utf-8'))
-VERSION = '20261016.2'
+VERSION = '20261016.3'
 BASE = 'https://autixai-site.vercel.app'
 C = DATA['contact']
 e = lambda value: escape(str(value), quote=True)
@@ -116,8 +116,9 @@ for slug,(title,description) in TITLES.items():
     html=re.sub(r'<link rel="icon"[^>]*>', '',html)
     html=html.replace('</head>','<link rel="icon" href="/branding/autixai-icon-20261011.svg" type="image/svg+xml">\n</head>')
     html=re.sub(r'<(?:script[^>]+src|link[^>]+href)="/intro\.(?:js|css)[^\"]*"[^>]*>(?:</script>)?', '', html)
+    html=re.sub(r'<script[^>]+src="/overview\.js[^\"]*"[^>]*></script>', '', html)
     if not slug:
-        html=html.replace('</head>',f'<link rel="stylesheet" href="/intro.css?v={VERSION}"><script src="/intro.js?v={VERSION}" defer></script>\n</head>')
+        html=html.replace('</head>',f'<link rel="stylesheet" href="/intro.css?v={VERSION}"><script src="/intro.js?v={VERSION}" defer></script><script src="/overview.js?v={VERSION}" defer></script>\n</head>')
     for key,value in [('description',description),('og:title',title),('og:description',description),('twitter:title',title),('twitter:description',description),('og:url',BASE+('/'+slug+'/' if slug else '/'))]:
         html=re.sub(rf'(<meta (?:name|property)="{key}" content=")[^"]*(")',lambda m:m[1]+e(value)+m[2],html)
     canonical=BASE+('/'+slug+'/' if slug else '/')

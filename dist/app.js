@@ -441,22 +441,6 @@ window.addEventListener('autixai:enquiry-prefill', event => {
   form.elements.email.focus({preventScroll:true});
 });
 
-const filmButton = document.getElementById('watch-film');
-const film = document.getElementById('workflow-film');
-const video = document.getElementById('demo-video');
-filmButton.addEventListener('click', () => {
-  const open = film.hidden;
-  film.hidden = !open; filmButton.setAttribute('aria-expanded', String(open));
-  if (!open) { video.pause(); return; }
-  const source = video.querySelector('source');
-  if (!source.hasAttribute('src')) { source.src = source.dataset.src; video.load(); }
-  video.play().catch(() => { document.getElementById('film-status').textContent = 'Use the video controls to play the AutixAI overview.'; });
-});
-video.addEventListener('error', () => { document.getElementById('film-status').textContent = 'The video could not load. You can read the transcript below or run the interactive workflow demo.'; });
-film.addEventListener('keydown', event => {
-  if (event.key === 'Escape') { event.preventDefault(); video.pause(); film.hidden = true; filmButton.setAttribute('aria-expanded','false'); filmButton.focus(); }
-});
-
 if('IntersectionObserver' in window) {
   const motion=new IntersectionObserver(entries=>entries.forEach(entry=>entry.target.classList.toggle('motion-visible',entry.isIntersecting)),{rootMargin:'60px'});
   document.querySelectorAll('.hero-visual,.portfolio-section,.contact-section').forEach(region=>motion.observe(region));
