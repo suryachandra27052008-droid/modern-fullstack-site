@@ -9,7 +9,7 @@ from policy_pages import POLICY_TITLES, business_details, render_policy_pages
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / 'dist'
 DATA = json.loads((ROOT / 'content/site-content.json').read_text(encoding='utf-8'))
-VERSION = '20261016.1'
+VERSION = '20261016.2'
 BASE = 'https://autixai-site.vercel.app'
 C = DATA['contact']
 e = lambda value: escape(str(value), quote=True)
@@ -20,9 +20,10 @@ def block(html, key, value):
     return re.sub(pattern, lambda _: f'<!-- content:{key}:start -->\n{value}\n<!-- content:{key}:end -->', html, flags=re.S)
 
 def brand():
-    # Display two regions of the supplied image; preserve the original logo pixels.
-    image = '<img class="brand-logo" src="/branding/autixai-logo-20261011.jpg" width="564" height="610" alt="">'
-    return f'<a class="brand" href="/" aria-label="AutixAI home"><span class="brand-icon" aria-hidden="true">{image}</span><span class="brand-wordmark" aria-hidden="true">{image}</span></a>'
+    # Reuse the intro's transparent artwork so no JPEG background covers the page.
+    icon = '<img class="brand-logo" src="/branding/autixai-intro-symbol-20261013.svg" width="236" height="156" alt="">'
+    wordmark = '<img class="brand-logo" src="/branding/autixai-intro-wordmark-20261013.svg" width="268" height="66" alt="">'
+    return f'<a class="brand" href="/" aria-label="AutixAI home"><span class="brand-icon" aria-hidden="true">{icon}</span><span class="brand-wordmark" aria-hidden="true">{wordmark}</span></a>'
 
 def navigation(page):
     links=[]
