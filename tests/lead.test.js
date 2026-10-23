@@ -115,6 +115,8 @@ test('FormSubmit validates its JSON receipt, uses fixed metadata and never claim
     assert.match(url,/owner%2Bteam%23route@example.com$/); return Response.json({success:true});
   });
   assert.equal(sent.options.headers.Referer,'https://autixai-site.vercel.app/');
+  assert.equal(sent.options.headers.Origin,'https://autixai-site.vercel.app');
+  assert.equal(JSON.parse(sent.options.body)._url,'https://autixai-site.vercel.app/#contact');
   const payload = JSON.parse(sent.options.body); assert.equal(payload._replyto,values.email); assert.equal(payload.leadId,lead.id); assert.ok(!payload._autoresponse);
   await deliverLead({...lead,fields:{...values,challenge:'<script>unsafe</script> & text'}},env,async (url,options) => {
     assert.equal(JSON.parse(options.body).challenge,'&lt;script&gt;unsafe&lt;/script&gt; &amp; text'); return Response.json({success:true});

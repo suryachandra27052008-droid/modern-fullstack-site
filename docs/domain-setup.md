@@ -1,8 +1,8 @@
 # autixai.tech connection
 
-Prepared on 24 October 2026 for the existing `autixai-site` Vercel project.
+Configured on 24 October 2026 for the existing `autixai-site` Vercel project.
 
-Both `autixai.tech` and `www.autixai.tech` have been assigned to project `prj_D6XqIqV6yRWb6Jp32zOogymz2LRz` in the existing team. Vercel accepts the ownership assignment; public DNS is not yet configured.
+Both `autixai.tech` and `www.autixai.tech` are assigned to project `prj_D6XqIqV6yRWb6Jp32zOogymz2LRz` in the existing team. All three DNS records were saved in the signed-in Get.tech dashboard. Vercel reports `configured-correctly` for both names and confirms the exact A and CNAME values below.
 
 ## Required DNS records at Get.tech
 
@@ -18,12 +18,12 @@ Use the provider's offered default TTL. Its published guidance says the root hos
 
 Get.tech instructions: https://cp.get.tech/kb/servlet/KBServlet/faq471.html
 
-## Migration sequencing
+## Website and HTTPS
 
-1. Add the exact owned HTTPS origins to the enquiry API while preserving the current site address. Tests also reject HTTP, other subdomains, unexpected ports and misleading suffixes.
-2. Apply the DNS records in the signed-in Get.tech account and verify propagation and the HTTPS certificate for both names.
-3. Confirm the homepage, media, navigation and enquiry validation on the custom domain without sending an unsolicited test enquiry.
-4. After DNS and HTTPS work, switch canonical URLs, sitemap, social metadata and provider website metadata to the chosen primary domain, and configure the alternate www address to redirect to it.
-5. Arrange a controlled real enquiry test with the owner. If the delivery service requests fresh activation for the new website address, complete that before treating email delivery as verified on the new domain.
+The public primary address is `https://autixai.tech`. All eight pages, social metadata, structured data, robots.txt and sitemap use this address. The project-level `www.autixai.tech` redirect targets `autixai.tech` with status 308.
 
-Do not redirect the existing working website to an unresolved domain or claim the custom domain is live before DNS and HTTPS verification.
+Certificate `cert_TFvrpb4T50OFGqFqbdsasdqa` covers both names and has automatic renewal enabled. Normal TLS handshakes with hostname and trust validation succeeded for both names at the configured Vercel address. The certificate expires on 21 January 2027.
+
+The enquiry API accepts only the exact owned HTTPS origins, the existing Vercel address and configured deployment origins. FormSubmit's already-activated source URL, Origin and Referer intentionally remain `https://autixai-site.vercel.app`; this keeps the current email route stable during the domain migration. The old public address remains available. Tests cover all three accepted origins and preservation of the provider metadata without sending real enquiries.
+
+Some recursive resolvers on the local network still cached the previous empty DNS zone during setup. Browser access returned `ERR_NAME_NOT_RESOLVED` while the authoritative nameservers, Vercel and Cloudflare DNS already returned the new records. Complete the browser smoke check after those negative caches expire: homepage, media, navigation and invalid enquiry validation. No browser HTTPS warning was bypassed, and no real test enquiry was sent.

@@ -1,6 +1,6 @@
 # AutixAI
 
-Existing AutixAI website with a small Vercel lead endpoint, hosted at https://autixai-site.vercel.app/. Olive, warm beige and light brown surfaces; dark brown outlines; Cinzel headings and self-hosted DM Sans body text. The supplied original logo is used unchanged in the header, footer and favicon.
+Existing AutixAI website with a small Vercel lead endpoint, hosted at https://autixai.tech/. Olive, warm beige and light brown surfaces; dark brown outlines; Cinzel headings and self-hosted DM Sans body text. The supplied original logo is used unchanged in the header, footer and favicon.
 
 ## Edit and preview
 

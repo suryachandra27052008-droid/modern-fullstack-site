@@ -1,7 +1,9 @@
 import {createHmac} from 'node:crypto';
 import {MemoryLeadStore, RedisLeadStore} from './lead-store.js';
 
-const SITE = 'https://autixai-site.vercel.app';
+// FormSubmit has already activated this source. Preserve it when the public
+// website domain changes so the working email route does not need reactivation.
+const FORM_SOURCE_SITE = 'https://autixai-site.vercel.app';
 const MAX_BYTES = 16384;
 const limits = {name:80, email:120, phone:25, business:100, industry:100, interest:100, challenge:1800, preferredContact:20, teamSize:5, timeSpent:100, tools:200, website:200};
 const required = ['name','email','business','industry','interest','challenge','preferredContact'];
@@ -48,8 +50,7 @@ async function readBody(request) {
 }
 
 function allowedOrigin(request, env) {
-  // Keep the current address working while the owned custom domain's DNS is set up.
-  const allowed = new Set([SITE, 'https://autixai.tech', 'https://www.autixai.tech']);
+  const allowed = new Set([FORM_SOURCE_SITE, 'https://autixai.tech', 'https://www.autixai.tech']);
   for (const host of [env.VERCEL_URL, env.VERCEL_BRANCH_URL]) if (host && /^[a-zA-Z0-9.-]+\.vercel\.app$/.test(host)) allowed.add(`https://${host}`);
   if (!env.VERCEL && env.NODE_ENV !== 'production') for (const origin of ['http://127.0.0.1:4175','http://localhost:4175']) allowed.add(origin);
   return allowed.has(request.headers.get('origin')) && request.headers.get('sec-fetch-site') !== 'cross-site';
@@ -63,7 +64,7 @@ function emailPayload(lead) {
   return {...Object.fromEntries(Object.entries(lead.fields).map(([key,value]) => [key,escapeText(value)])), source:'AutixAI website', submittedAt:lead.createdAt, leadId:lead.id,
     followUp:'Review this enquiry and create a personal follow-up. No automatic customer acknowledgement was sent.',
     _subject:`New AutixAI enquiry — ${lead.fields.business.replace(/[\r\n]/g,' ').slice(0,80)}`,
-    _replyto:lead.fields.email, _template:'table', _url:`${SITE}/#contact`, _honey:''};
+    _replyto:lead.fields.email, _template:'table', _url:`${FORM_SOURCE_SITE}/#contact`, _honey:''};
 }
 export async function deliverLead(lead, env, fetcher = fetch) {
   const common = {method:'POST', redirect:'error', signal:AbortSignal.timeout(10000)};
@@ -75,7 +76,7 @@ export async function deliverLead(lead, env, fetcher = fetch) {
       // Preserve the documented email-route separator while escaping unsafe path characters.
       const recipientPath = encodeURIComponent(email).replace('%40','@');
       const response = await fetcher(`https://formsubmit.co/ajax/${recipientPath}`, {...common,
-        headers:{'Content-Type':'application/json', Accept:'application/json', Origin:SITE, Referer:`${SITE}/`}, body:JSON.stringify(payload)});
+        headers:{'Content-Type':'application/json', Accept:'application/json', Origin:FORM_SOURCE_SITE, Referer:`${FORM_SOURCE_SITE}/`}, body:JSON.stringify(payload)});
       if (!response.ok) throw new DeliveryError('provider-http', response.status >= 500, response.status);
       let result;
       try { result = await response.json(); } catch { throw new DeliveryError('provider-receipt', true); }

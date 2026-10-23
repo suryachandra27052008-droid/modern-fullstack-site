@@ -1,4 +1,4 @@
-import { createGuide, validateAudit, buildAuditDraft, MAX_MESSAGE } from './assistant-engine.js?v=20261016.3';
+import { createGuide, validateAudit, buildAuditDraft, MAX_MESSAGE } from './assistant-engine.js?v=20261024.1';
 
 const node = (tag, className = '', text = '') => {
   const element = document.createElement(tag); element.className = className;
