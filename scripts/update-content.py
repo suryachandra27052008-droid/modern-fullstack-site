@@ -9,7 +9,7 @@ from policy_pages import POLICY_TITLES, business_details, render_policy_pages
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / 'dist'
 DATA = json.loads((ROOT / 'content/site-content.json').read_text(encoding='utf-8'))
-VERSION = '20261024.1'
+VERSION = '20261024.2'
 BASE = 'https://autixai.tech'
 C = DATA['contact']
 e = lambda value: escape(str(value), quote=True)
@@ -40,7 +40,9 @@ def header(page):
     top=[item for item in DATA['navigation'] if item['href'] in ['/#services', '/pricing/']]
     nav=''.join(f'<a href="{e(item["href"].removeprefix("/") if not page and item["href"].startswith("/#") else item["href"])}"'+(' aria-current="page"' if item['href']==f'/{page}/' else '')+f'>{e(item["label"])}</a>' for item in top)
     nav+='<a href="/trust/"'+(' aria-current="page"' if page=='trust' else '')+'>Trust</a>'
-    return f'''<header class="site-header"><div class="container nav-inner">{brand()}<nav class="desktop-nav" aria-label="Main navigation">{nav}</nav><a href="{audit}" class="button button-small header-cta cta-beam" data-intent="consultation" data-booking-link><span class="cta-beam-inner" data-booking-label>Request a Free Consultation</span></a><button class="menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="mobile-nav"><span></span><span></span></button></div><nav id="mobile-nav" class="mobile-nav" aria-label="Mobile navigation" hidden>{navigation(page)}<a href="/trust/">Trust & data</a><a href="{'/?intent=consultation#contact' if page else '#contact'}" data-intent="consultation" data-booking-link>Request a Free Consultation</a></nav></header>'''
+    instagram=next((item for item in C.get('socials',[]) if urlsplit(item.get('url','')).scheme=='https' and urlsplit(item.get('url','')).hostname in ['instagram.com','www.instagram.com']),None)
+    if instagram: nav+=f'<a href="{e(instagram["url"])}" target="_blank" rel="noopener noreferrer" aria-label="{e(instagram["label"])} (opens in a new tab)">Instagram ↗</a>'
+    return f'''<header class="site-header"><div class="container nav-inner">{brand()}<nav class="desktop-nav" aria-label="Main navigation">{nav}</nav><a href="{audit}" class="button button-small header-cta cta-beam" data-intent="consultation" data-booking-link><span class="cta-beam-inner" data-booking-label>Request a Free Consultation</span></a><button class="menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="mobile-nav"><span></span><span></span></button></div><nav id="mobile-nav" class="mobile-nav" aria-label="Mobile navigation" hidden>{navigation(page)}<a href="/trust/">Trust & data</a>{social_links()}<a href="{'/?intent=consultation#contact' if page else '#contact'}" data-intent="consultation" data-booking-link>Request a Free Consultation</a></nav></header>'''
 
 def social_links():
     social=''
