@@ -48,7 +48,8 @@ async function readBody(request) {
 }
 
 function allowedOrigin(request, env) {
-  const allowed = new Set([SITE]);
+  // Keep the current address working while the owned custom domain's DNS is set up.
+  const allowed = new Set([SITE, 'https://autixai.tech', 'https://www.autixai.tech']);
   for (const host of [env.VERCEL_URL, env.VERCEL_BRANCH_URL]) if (host && /^[a-zA-Z0-9.-]+\.vercel\.app$/.test(host)) allowed.add(`https://${host}`);
   if (!env.VERCEL && env.NODE_ENV !== 'production') for (const origin of ['http://127.0.0.1:4175','http://localhost:4175']) allowed.add(origin);
   return allowed.has(request.headers.get('origin')) && request.headers.get('sec-fetch-site') !== 'cross-site';

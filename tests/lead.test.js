@@ -30,12 +30,25 @@ test('API rejects foreign/missing origins, non-JSON, malformed and oversized bod
   const handler = createLeadHandler({env,deliver:async () => {sends++; return accepted();}});
   assert.equal((await handler(new Request('https://autixai-site.vercel.app/api/lead'))).status,405);
   assert.equal((await handler(new Request('https://autixai-site.vercel.app/api/lead/',{method:'POST'}))).status,404);
-  for (const origin of ['https://evil.example','null','']) assert.equal((await handler(request(values,{headers:{Origin:origin}}))).status,403);
+  for (const origin of ['https://evil.example','null','', 'http://autixai.tech', 'https://autixai.tech:444', 'https://autixai.tech.evil.example', 'https://other.autixai.tech']) assert.equal((await handler(request(values,{headers:{Origin:origin}}))).status,403);
   assert.equal((await handler(request(values,{headers:{'Content-Type':'text/plain'}}))).status,415);
   for (const body of ['{','[]','null']) assert.equal((await handler(request(body))).status,body === '{' ? 400 : 422);
   assert.equal((await handler(request('x'.repeat(17000)))).status,413);
   assert.equal((await handler(request(values,{headers:{'Content-Length':'17000'}}))).status,413);
   assert.equal(sends,0);
+});
+
+test('the owned custom domain, www address and existing address can submit through the same validated API', async () => {
+  for (const origin of ['https://autixai.tech', 'https://www.autixai.tech', 'https://autixai-site.vercel.app']) {
+    let sends = 0;
+    const handler = createLeadHandler({env,deliver:async () => { sends++; return accepted(); }});
+    const response = await handler(new Request(`${origin}/api/lead`, {
+      method:'POST',headers:{Origin:origin,'Content-Type':'application/json','Sec-Fetch-Site':'same-origin'},body:JSON.stringify(values)
+    }));
+    assert.equal(response.status,201,origin);
+    assert.equal((await response.json()).accepted,true);
+    assert.equal(sends,1);
+  }
 });
 
 test('honeypot and invalid fields never reach the destination', async () => {
