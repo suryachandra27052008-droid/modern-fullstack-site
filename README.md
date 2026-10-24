@@ -23,6 +23,15 @@ Use Node.js 24: run `npm ci --ignore-scripts`, `npm run build`, then `npm run de
 - Twelve FAQs; six additional questions sit in a disclosure to keep the page compact on phones.
 - Eight pages: home, pricing, trust, privacy, website terms, payments/refunds, cookies and accessibility. `scripts/policy_pages.py` authors the notices, and the content generator refreshes their shell and metadata. Project-specific commercial and data terms are agreed separately.
 
+## Hero robot
+
+The homepage hero uses the owner's authored Companion 02 robot from `rewire-robot`.
+Its local Three.js bundle preserves the model, blinking, tracking and wave gestures;
+the source project remains unchanged. The robot waits for the opening logo reveal,
+pauses offscreen or in a background tab, respects reduced motion and the website's
+motion setting, and releases GPU resources on page exit. WebGL2 failures retain
+the authored static illustration. Source and rebuild notes are in `src/robot/README.md`.
+
 ## Calculator
 
 Choose team workload (people × repetitive hours/person/week) or one task (tasks/day × minutes/task × working days ÷ 60). Monthly hours use 52/12 weeks; annual values use 52 weeks. Estimated automatable percentage gives potential capacity returned; value multiplies that capacity by the visitor's hourly staff cost. Optional visitor-entered setup and recurring costs give illustrative net capacity value and payback. Capacity value is not necessarily cash saved or a staffing reduction. These are estimates; actual results depend on the workflow and implementation.
@@ -71,7 +80,7 @@ Native dialog focus containment, Escape/close focus return, labelled controls, i
 
 `vercel.json` uses the Other framework preset, `npm ci --ignore-scripts`, `npm run build`, output `dist`, and the root `api/lead.js` Function. `.vercelignore` excludes credentials, local metadata and source-only branding while retaining the build script, tests and server files. All eight pages have canonical URLs, social metadata and Organization schema. Home FAQPage data comes from the same FAQ source as the visible answers. Search engine enhanced display is not guaranteed.
 
-Body and heading fonts are self-hosted with licenses in `dist/fonts`; no external font service is loaded. Social preview is the existing 1200×630 `dist/assets/og-preview.png`. The current linked-circle logo is the unchanged owner-supplied `dist/branding/autixai-logo-20261011.jpg`. Header/footer use CSS regions of its symbol and exact wordmark for a compact horizontal layout. The matching SVG favicon uses the linked-circle symbol. The previous logo is retained as `dist/branding/autixai-logo-original.jpg`. No stock client logos, fabricated trust signals, heavy animation library or new runtime dependency was added. The current video is the owner-supplied `Autix_AI_Audited_Final_v2.mp4`, published as `dist/media/autixai-overview-v2.mp4`. The previous sample renderer at `scripts/render-workflow-film.py` is historical and excluded from deployment; it does not generate the current video.
+Body and heading fonts are self-hosted with licenses in `dist/fonts`; no external font service is loaded. Social preview is the existing 1200×630 `dist/assets/og-preview.png`. The current linked-circle logo is the unchanged owner-supplied `dist/branding/autixai-logo-20261011.jpg`. Header/footer use CSS regions of its symbol and exact wordmark for a compact horizontal layout. The matching SVG favicon uses the linked-circle symbol. The previous logo is retained as `dist/branding/autixai-logo-original.jpg`. No stock client logos or fabricated trust signals are used. The hero robot uses a locally bundled Three.js runtime as described above. The current video is the owner-supplied `Autix_AI_Audited_Final_v2.mp4`, published as `dist/media/autixai-overview-v2.mp4`. The previous sample renderer at `scripts/render-workflow-film.py` is historical and excluded from deployment; it does not generate the current video.
 
 The homepage has a silent opening logo reveal from the owner-supplied `autix-4k-fixed.mp4`. Both web versions now retain all 600 native frames at 60 fps, with no audio: HD 1280×720 for desktop (about 0.90 MB) and a lighter 960×540 version for phones (about 0.52 MB). Both use H.264 Baseline without B-frame reordering, standard limited-range 8-bit YUV420, and MP4 fast start to reduce decoding and loading work. Regenerate with `node scripts/encode-intro.mjs <original-60fps-master>`; it verifies the output frame counts, rate and absence of audio. No 30 fps frames are duplicated.
 

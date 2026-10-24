@@ -332,7 +332,7 @@ updateSendButtons();
 document.querySelectorAll('[data-intent]').forEach(link => link.addEventListener('click', () => { document.getElementById('interest').value = ['demo','consultation'].includes(link.dataset.intent) ? 'Free consultation' : 'Free automation audit'; clearPreparedInquiry(); }));
 let formStarted = false;
 form.addEventListener('focusin', () => { if (!formStarted) { formStarted = true; window.AutixAIEvents.track('contact_form_start'); } });
-document.querySelectorAll('.hero-visual,.contact-section').forEach(region=>{
+document.querySelectorAll('.hero-visual:not(.hero-robot),.contact-section').forEach(region=>{
   const mesh=document.createElement('div');mesh.className='mesh-art';mesh.setAttribute('aria-hidden','true');region.prepend(mesh);
 });
 

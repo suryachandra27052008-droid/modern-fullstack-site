@@ -1,4 +1,4 @@
-# Asset and service inventory — 8 October 2026
+# Asset and service inventory — updated 24 October 2026
 
 | Asset/service | Use and evidence | Follow-up |
 | --- | --- | --- |
@@ -7,6 +7,7 @@
 | Caviar Dreams | Inactive retained original fonts; attribution records Lauren Thompson and the author's distribution page, https://www.dafont.com/caviar-dreams.font, whose note allows personal/commercial use. | Retain attribution; review conditions if modifying/redistributing. |
 | AutixAI logo | User-supplied linked-circle JPG (`autixai-logo-20261011.jpg`), preserved unchanged. Header/footer show the symbol and exact wordmark with CSS framing; the favicon uses a matching SVG symbol. Previous JPG retained as an inactive source. | Owner must hold rights; supplying a file does not independently establish copyright/trademark ownership. |
 | OG preview | Existing local brand preview; no external stock source configured. | Do not replace with unlicensed media. |
+| Hero robot | Owner-authored Companion 02 from `rewire-robot/src/robot`, imported on 24 October 2026. Model, motion and markup are preserved. A locally bundled Three.js 0.186.1 runtime replaces the former hero workflow panel. | MIT notice in `dist/robot/THREE-LICENSE.txt`; source and rebuild notes in `src/robot/README.md`. No remote model, Spline, React runtime, tracking or new account is used. |
 | AutixAI overview video | Owner-supplied `Autix_AI_Audited_Final_v2.mp4`, 56.733 seconds, 1920×1080 at 60 fps with AAC audio. Published as `dist/media/autixai-overview-v2.mp4`; stream-copy remux with MP4 fast start preserves original audio/video. New poster and matching text alternative replace the previous 36-second workflow sample. | Demonstration screens/figures are described as illustrative. Loads only after the visitor selects Play; native controls and Escape-to-close retained. |
 | Opening logo reveal | Owner-supplied `autix-logo-reveal/renders/autix-4k-fixed.mp4`. Both silent desktop HD (1280×720) and lightweight phone (960×540) streams retain the master's 600 native frames at 60 fps, with standard YUV420 H.264 Baseline and MP4 fast start. Static mobile edge shades replace a video mask, and covered-page decoration pauses. Exact logo images decode before a 2.1-second transform into the header. | Decorative, skippable intro; reduced-motion, missing-artwork and slow-connection fallback. Tab-session flag disclosed in the storage notice. |
 | Vercel | Website hosting. No analytics package configured. Hosting request metadata is disclosed in privacy notice. | Review project logs/access/retention in the hosting account. |
@@ -16,4 +17,4 @@
 | Optional calendar/analytics | No booking URL configured; consultation-request fallback active. Analytics disabled. No marketing-email provider or payment checkout. | Review actual provider, data flow, fees, consent and notice before activation. |
 | Integration platform names | Text-only feasibility examples, no partner badges or client logos. | No endorsement/partnership claim. |
 
-Email enquiries introduce a visitor-triggered same-origin API request, followed by server delivery or the documented FormSubmit browser compatibility handoff. Vercel WAF protects the API, not FormSubmit's separate public endpoint. An optional Redis adapter and inactive n8n/Postgres workflow template have no live credentials or active connection. No external runtime script/package, analytics provider, payment service or stock image was introduced.
+Email enquiries introduce a visitor-triggered same-origin API request, followed by server delivery or the documented FormSubmit browser compatibility handoff. Vercel WAF protects the API, not FormSubmit's separate public endpoint. An optional Redis adapter and inactive n8n/Postgres workflow template have no live credentials or active connection. The hero robot uses a locally bundled Three.js runtime. No remotely hosted runtime script, analytics provider, payment service or stock image was introduced.
